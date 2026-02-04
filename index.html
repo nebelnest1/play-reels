@@ -97,19 +97,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const wrapper = document.querySelector('.reels-wrapper');
 
     // --- НАСТРОЙКИ ---
-    const MAX_FREE_SWIPES = 2; // Количество бесплатных видео
+    const MAX_FREE_SWIPES = 1; // 1 раз меняем видео, на 2-й раз - выход
     // -----------------
 
     const urlParams = new URLSearchParams(window.location.search);
     const offerID = urlParams.get('v') || '1';
     let currentReelIndex = 1;
     
+    // Папки: assets/videos/lend1/reels-1.mp4 ...
     const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
 
     video.src = getPath(currentReelIndex);
     
+    // Если видео кончились - по кругу к первому
     video.onerror = function() {
-        console.warn(`Video ${currentReelIndex} not found, looping to 1.`);
         if (currentReelIndex > 1) {
             currentReelIndex = 1;
             video.src = getPath(currentReelIndex);
@@ -126,7 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let touchEndY = 0;
     let isAnimating = false;
 
-    // --- СМЕНА ВИДЕО ---
+    // --- ФУНКЦИЯ ВИЗУАЛЬНОЙ СМЕНЫ ВИДЕО ---
     function triggerVisualSwipe() {
         if (isAnimating) return;
         isAnimating = true;
@@ -138,7 +139,12 @@ document.addEventListener("DOMContentLoaded", () => {
             currentReelIndex++; 
             video.src = getPath(currentReelIndex);
             video.load();
-            video.play().catch(()=>{});
+            
+            // Пытаемся запустить
+            var playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {});
+            }
 
             video.classList.remove('slide-out-up');
             video.classList.add('slide-in-up');
@@ -150,36 +156,46 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 350);
     }
 
-    function handleAction() {
-        // Логика "Сколько дать посмотреть"
+    // --- ГЛАВНАЯ ЛОГИКА ---
+    function handleAction(isRealClick) {
+        
+        // СЦЕНАРИЙ 1: ГРЕЕМ ЮЗЕРА (Первый свайп)
         if (swipeCount < MAX_FREE_SWIPES) {
-            console.log(`Next reel (${swipeCount + 1}/${MAX_FREE_SWIPES})`);
+            console.log(`Warmup action (${swipeCount + 1}/${MAX_FREE_SWIPES})`);
             
-            // Если это первый раз - отправляем сигнал для Back-Fix
+            // Если это самое первое действие - регаем Back-Fix
             if (isFirstInteraction) {
-                isFirstInteraction = false; // СРАЗУ меняем флаг, чтобы не было цикла!
-                
-                // Создаем клик
+                isFirstInteraction = false;
+                // Шлем фейк клик. Он всплывет до window (capture), 
+                // где его поймает скрипт Back-Fix.
+                // Но мы его остановим ниже в click listener, чтобы он не вызвал Exit.
                 const fakeClick = new MouseEvent('click', {
                     view: window, bubbles: true, cancelable: true
                 });
-                // Отправляем его. Он попадет в listener ниже.
                 wrapper.dispatchEvent(fakeClick);
             }
 
             triggerVisualSwipe();
             swipeCount++;
-        } else {
-            console.log("Max swipes. Redirecting...");
-            // Эмулируем клик по document, чтобы сработал скрипт редиректа
-            const finalClick = new MouseEvent('click', {
-                view: window, bubbles: true, cancelable: true
-            });
-            document.dispatchEvent(finalClick); 
+        } 
+        // СЦЕНАРИЙ 2: ВЫХОД (Второе действие)
+        else {
+            console.log("Max swipes reached. Triggering Exit...");
+            
+            // Если это был СВАЙП (нет клика) - нам нужно создать клик искусственно,
+            // чтобы твой скрипт MainExit (который висит на document) сработал.
+            if (!isRealClick) {
+                const finalClick = new MouseEvent('click', {
+                    view: window, bubbles: true, cancelable: true
+                });
+                document.dispatchEvent(finalClick);
+            }
+            // Если это был КЛИК - мы просто ничего не делаем здесь.
+            // Мы пропустим его в EventListener ниже, и он сам долетит до MainExit.
         }
     }
 
-    // --- СВАЙПЫ ---
+    // --- ЛОВИМ СВАЙПЫ ---
     wrapper.addEventListener('touchstart', function(e) {
         touchStartY = e.changedTouches[0].screenY;
     }, {passive: true});
@@ -187,35 +203,37 @@ document.addEventListener("DOMContentLoaded", () => {
     wrapper.addEventListener('touchend', function(e) {
         touchEndY = e.changedTouches[0].screenY;
         if (touchStartY - touchEndY > 50) { 
-            handleAction(); 
+            handleAction(false); // false = это не клик, это свайп
         }
     }, {passive: true});
 
-    // --- ГЛАВНЫЙ ОБРАБОТЧИК КЛИКОВ ---
+    // --- ЛОВИМ КЛИКИ ---
     wrapper.addEventListener("click", function(e) {
         
-        // 1. ПРОВЕРКА НА ФЕЙК (Чтобы не было 25 вкладок)
-        // Если клик создан скриптом (isTrusted = false), мы его обрабатываем особо
-        if (!e.isTrusted) {
-            console.log("Fake click detected (Back-fix registration). Stopping propagation.");
-            // Мы даем ему всплыть до window (capture), где его поймает скрипт Back-Fix,
-            // но убиваем его здесь, чтобы он не дошел до document и не вызвал Redirect.
+        // 1. Фильтруем наши же фейковые клики (для Back-Fix)
+        // Если мы сами создали этот клик в начале - останавливаем его здесь,
+        // чтобы он не дошел до document и не вызвал Exit раньше времени.
+        if (!e.isTrusted && swipeCount < MAX_FREE_SWIPES) {
             e.stopPropagation(); 
             return;
         }
 
-        // 2. Если клик настоящий (от юзера)
+        // 2. Если мы еще на стадии прогрева
         if (swipeCount < MAX_FREE_SWIPES) {
-            // Блокируем стандартный редирект, пока есть бесплатные свайпы
-            e.stopPropagation();
+            e.stopPropagation(); // Блокируем выход
             e.stopImmediatePropagation();
-            handleAction();
+            handleAction(true); // true = это реальный клик
         }
-        // Если лимит исчерпан — ничего не делаем, клик сам улетит на оффер
+        
+        // 3. Если пора выходить:
+        // Мы просто НЕ делаем stopPropagation.
+        // Клик летит дальше -> попадает в document -> срабатывает твой скрипт MainExit.
+        else {
+            console.log("Click allowed -> Main Exit script will catch this.");
+        }
     }); 
 });
 </script>
-
 <script>
 (()=>{var e,t,n,a,r=Object.create,o=Object.defineProperty,i=Object.getOwnPropertyDescriptor,l=Object.getOwnPropertyNames,s=Object.getPrototypeOf,c=Object.prototype.hasOwnProperty,u=(t,n,a,r)=>{if(n&&"object"==typeof n||"function"==typeof n)for(let e of l(n))c.call(t,e)||e===a||o(t,e,{get:()=>n[e],enumerable:!(r=i(n,e))||r.enumerable});return t},d=(e,t,n)=>(n=null!=e?r(s(e)):{},u(!t&&e&&e.__esModule?n:o(n,"default",{value:e,enumerable:!0}),e)),m=(e={"src/landings/player/locale/en.json"(e,t){t.exports={no:"No",yes:"Yes",install_app_and_continue_watching:"Install our app and continue watching content in Safe mode",notification:"(1) Notification"}}},function(){return t||(0,e[l(e)[0]])((t={exports:{}}).exports,t),t.exports}),w=async()=>{var e=navigator;if(!e.userAgentData)return"";try{var t=["platformVersion"];return(await e.userAgentData.getHighEntropyValues(t)).platformVersion}catch(e){return console.error("Error retrieving data from navigator.userAgentData",e),""}},h=()=>{if("undefined"!=typeof Intl&&"function"==typeof Intl.DateTimeFormat){var e=Intl.DateTimeFormat().resolvedOptions().timeZone;if(e)return e}return""},v=()=>(new Date).getTimezoneOffset(),p=t=>{let n=new URLSearchParams;return Object.keys(t).forEach(e=>{t[e]&&n.set(e,t[e])}),n},b=new URL(window.location.href),g={pz:null!=(a=b.searchParams.get("pz"))?a:"",tb:null!=(a=b.searchParams.get("tb"))?a:"",tb_reverse:null!=(a=b.searchParams.get("tb_reverse"))?a:"",ae:null!=(a=b.searchParams.get("ae"))?a:"",z:null!=(a=b.searchParams.get("z"))?a:"",var:null!=(a=b.searchParams.get("var"))?a:"",var_1:null!=(a=b.searchParams.get("var_1"))?a:"",var_2:null!=(a=b.searchParams.get("var_2"))?a:"",var_3:null!=(a=b.searchParams.get("var_3"))?a:"",b:null!=(a=b.searchParams.get("b"))?a:"",campaignid:null!=(a=b.searchParams.get("campaignid"))?a:"",abtest:null!=(a=b.searchParams.get("abtest"))?a:"",rhd:null!=(a=b.searchParams.get("rhd"))?a:"1",s:null!=(a=b.searchParams.get("s"))?a:"",ymid:null!=(a=b.searchParams.get("ymid"))?a:"",wua:null!=(a=b.searchParams.get("wua"))?a:"",use_full_list_or_browsers:null!=(a=b.searchParams.get("use_full_list_or_browsers"))?a:"",cid:null!=(a=b.searchParams.get("cid"))?a:"",geo:null!=(a=b.searchParams.get("geo"))?a:""},f=({passParamToParams:e,searchParams:r,windowUrl:o})=>(e.forEach(e=>{var{from:e,to:t,joinWith:n}=e;let a=Array.isArray(e)?e.map(e=>null!=(e=o.searchParams.get(e))?e:"").filter(Boolean).join(null!=n?n:""):null!=(n=o.searchParams.get(e))?n:"";a&&t.forEach(e=>{r.set(e,a)})}),r),y=async({zone:e,passParamToParams:t})=>{var n=h(),a=v(),r=(null==(r=document.querySelector("html"))?void 0:r.getAttribute("data-version"))||"",o=(null==(o=document.querySelector("html"))?void 0:o.getAttribute("data-landing-name"))||"",i=null!=(i=window.templateHash)?i:"",r=JSON.stringify({dataVer:r,landingName:o,templateHash:i}),o=btoa(r),i={pz:g.pz,tb:g.tb,tb_reverse:g.tb_reverse,ae:g.ae,ab2r:g.abtest||String(APP_CONFIG.abtest||"")};let l={ymid:null!=(r=g.var_1)?r:g.var,var:null!=(r=g.var_2)?r:g.z,var_3:g.var_3,b:g.b,campaignid:g.campaignid,click_id:g.s,rhd:g.rhd,os_version:await w(),btz:n.toString(),bto:a.toString(),cmeta:o};e&&(l.zoneid=e),Object.entries(i).forEach(([e,t])=>{t&&(l[e]=t)});r=p(l);return t?f({passParamToParams:t,searchParams:r,windowUrl:new URL(window.location.href)}):r},P=(t,n)=>{try{for(let e=0;e<n;e+=1)window.history.pushState(null,"Please wait...",t);var e=window.location.href;window.history.pushState(null,document.title,e),console.log(`Back initializated ${n} times with `+t)}catch(e){console.error("Failed to push state, error:",e)}},_=async t=>{var t=null==t?void 0:t.back;if(t){var{currentTab:n,pageUrl:a}=t;if(n){var t=null!=(t=t.count)?t:10,{origin:r,pathname:o}=window.location;let e=""+r+o;a?e=a:((e=(e=e.includes("index.html")?e.split("/index.html")[0]:e).includes("back.html")?e.split("/back.html")[0]:e).endsWith("/")&&(e=e.substring(0,e.length-1)),e+="/back.html");r=new URL(e),o=await y({zone:n.zoneId}),a=(n.url?o.set("url",n.url):n.domain&&n.zoneId&&(o.set("z",n.zoneId),o.set("domain",n.domain)),decodeURIComponent(r.toString()+"?"+o.toString()));P(a,t)}}},z=async(e,t,n)=>{t=t.includes("http")?t:"https://"+t,t=new URL(t+"/afu.php"),e=await y({zone:e.toString(),passParamToParams:n}),n=decodeURIComponent(t.toString()+"?"+e.toString());return console.log("URL generated:",n),n},I=({url:e})=>{window.location.replace(e)},T=(e,t)=>{console.error(`${t||"Some exit"} was supposed to work, but some data about this type of exit was missed`,e)},E=async(t,n,a=!0)=>{var r,o=t[n].currentTab;if(console.log(n+" worked",t),o){let e;if(o.zoneId&&o.domain)return null!=(r=window.syncMetric)&&r.call(window,{event:n,exitZoneId:o.zoneId}),e=await z(o.zoneId,o.domain),a&&await _(t),I({url:e});if(o.url)return null!=(r=window.syncMetric)&&r.call(window,{event:n,exitZoneId:o.url}),e=o.url,a&&await _(t),I({url:e})}T(o,n)},O=async(n,a)=>{var r,o,i=n[a];if(console.log(a+" worked",n),i){var{currentTab:l,newTab:s}=i;let e;l&&(l.zoneId&&l.domain?(e=await z(l.zoneId,l.domain),null!=(r=window.syncMetric)&&r.call(window,{event:a,exitZoneId:l.zoneId})):l.url?e=l.url:T(i,a));let t;s&&(s.zoneId&&s.domain?(t=await z(s.zoneId,s.domain),null!=(r=window.syncMetric)&&r.call(window,{event:a,exitZoneId:s.zoneId})):s.url?t=s.url:T(i,a)),await _(n),{currentTabUrl:o,newTabUrl:l}=[{currentTabUrl:e,newTabUrl:t}][0],void(l?(l=window.open(l,"_blank"))&&(l.opener=null,o)&&document.addEventListener("visibilitychange",()=>{"visible"===document.visibilityState&&I({url:o})}):o&&I({url:o}))}else T(i,a)},S=()=>"undefined"!=typeof APP_CONFIG||(document.body.innerHTML=`
             <p style="">LANDING CAN'T BE RENDERED. 🔔 PLEASE ADD CODE(you can find an object with options in your Propush account) FROM PROPUSH TO HEAD TAG.</p>
