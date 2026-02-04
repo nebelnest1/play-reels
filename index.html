@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Video Stream</title>
+    <title>Reels View</title>
     
     <script>
     var APP_CONFIG = {
@@ -11,7 +11,7 @@
         mainExit_currentTab_zoneId: 10217421,
         mainExit_newTab_zoneId: 10217420,
         autoexit_zoneId: 10217422,
-        autoexit_timeToRedirect: 30, // Я ПОСТАВИЛ 30 СЕК (оптимально для видео)
+        autoexit_timeToRedirect: 30, 
         reverse_zoneId: 10217419,
         back_zoneId: 10217423,
         back_count: 8
@@ -19,127 +19,105 @@
     </script>
 
     <style>
-        /* Сброс стилей и база */
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         
-        /* Главный контейнер */
-        .reels-wrapper { 
-            position: relative; 
-            width: 100%; 
-            height: 100%; 
-            display: flex; 
-            flex-direction: column; 
-            cursor: pointer; 
-        }
+        .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; }
+        .xh-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: #000; }
 
-        /* Видео на весь экран */
-        .xh-video { 
-            position: absolute; 
-            inset: 0; 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
-            z-index: 1; 
-            background: #000;
-        }
-
-        /* Интерфейс поверх видео */
+        /* Интерфейс */
         .reels-ui { 
-            position: absolute; 
-            inset: 0; 
-            z-index: 10; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: flex-end; 
-            background: linear-gradient(180deg, rgba(0,0,0,0) 60%, rgba(0,0,0,0.8) 100%);
-            pointer-events: none; /* Пропускаем клики сквозь интерфейс */
+            position: absolute; inset: 0; z-index: 10; 
+            display: flex; flex-direction: column; justify-content: space-between; 
+            pointer-events: none; 
+            background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
         }
 
-        /* Правая панель кнопок */
-        .side-bar { 
-            position: absolute; 
-            right: 10px; 
-            bottom: 100px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            gap: 20px; 
-        }
-        .side-item { display: flex; flex-direction: column; align-items: center; }
-        .side-icon { 
-            width: 38px; 
-            height: 38px; 
-            margin-bottom: 5px; 
-            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); 
-        }
-        .side-text { color: #fff; font-size: 13px; font-weight: 600; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
-
-        /* Нижний блок инфо */
-        .bottom-info { 
-            padding: 15px 15px 25px 15px; 
-            color: #fff; 
+        /* --- ВЕРХНЯЯ ПАНЕЛЬ (НОВОЕ) --- */
+        .top-bar {
+            padding: 50px 16px 20px; /* Отступ сверху под челку iPhone */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             width: 100%;
         }
-        .nickname { 
-            font-weight: 700; 
-            font-size: 17px; 
-            margin-bottom: 8px; 
-            display: flex; 
-            align-items: center; 
-            gap: 6px; 
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-        }
-        .verify-badge { 
-            width: 14px; height: 14px; 
-            background: #20D5EC; 
-            color: #fff;
-            border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 9px; 
-        }
-        .description { 
-            font-size: 15px; 
-            line-height: 1.4; 
-            opacity: 0.95; 
-            max-width: 85%;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-        }
-        .tags { color: #fff; font-weight: bold; }
 
-        /* Анимация Свайпа (Палец) */
-        .swipe-hint {
-            position: absolute; 
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%);
-            z-index: 20; 
-            pointer-events: none; 
+        /* Кнопка НАЗАД */
+        .back-icon {
+            width: 24px; height: 24px;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+            opacity: 0.9;
+        }
+
+        /* Кнопка ФИЛЬТРЫ (Справа) */
+        .filter-pill {
+            background: rgba(50, 50, 50, 0.6);
+            backdrop-filter: blur(4px);
+            border-radius: 20px;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .filter-icon { width: 14px; height: 14px; }
+
+        /* --- БОКОВАЯ ПАНЕЛЬ --- */
+        .right-actions {
+            position: absolute;
+            right: 8px;
+            bottom: 100px;
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-        .hand-icon { 
-            font-size: 65px; 
-            filter: drop-shadow(0 0 15px rgba(0,0,0,0.8)); 
-            animation: swipeUp 1.8s infinite ease-in-out; 
-        }
-        .swipe-text {
-            color: #fff;
-            font-weight: 800;
-            text-transform: uppercase;
-            font-size: 14px;
-            margin-top: 10px;
-            letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            opacity: 0.8;
+            gap: 16px;
         }
 
+        /* Круглые кнопки действий */
+        .action-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+        }
+        .icon-circle {
+            width: 44px; height: 44px;
+            background: rgba(30, 30, 30, 0.65); /* Темный круг как на скрине */
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(2px);
+            margin-bottom: 2px;
+        }
+        .action-icon { width: 24px; height: 24px; }
+        .action-text { font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        
+        /* Мелкие точки внизу */
+        .dots-menu {
+            display: flex; gap: 4px; margin-top: 10px; opacity: 0.8;
+        }
+        .dot { width: 4px; height: 4px; background: #fff; border-radius: 50%; }
+
+        /* --- НИЖНИЙ БЛОК --- */
+        .bottom-info { 
+            padding: 16px; 
+            color: #fff; 
+            margin-right: 60px; /* Чтобы текст не заезжал под иконки справа */
+        }
+        .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .avatar { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.5); }
+        .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+        .desc { font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+
+        /* Анимация Свайпа */
+        .swipe-hint {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 20; pointer-events: none; display: flex; flex-direction: column; align-items: center;
+        }
+        .hand-icon { font-size: 50px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: swipeUp 1.8s infinite ease-in-out; }
         @keyframes swipeUp {
-            0% { transform: translateY(60px) rotate(10deg); opacity: 0; }
-            20% { opacity: 1; }
-            80% { opacity: 1; }
-            100% { transform: translateY(-100px) rotate(0deg); opacity: 0; }
+            0% { transform: translateY(40px); opacity: 0; }
+            40% { opacity: 1; }
+            80% { opacity: 0; }
+            100% { transform: translateY(-60px); opacity: 0; }
         }
     </style>
 </head>
@@ -153,30 +131,67 @@
 
     <div id="swipe-hint" class="swipe-hint">
         <div class="hand-icon">👆</div>
-        <div class="swipe-text">Swipe Up</div>
     </div>
 
     <div class="reels-ui">
-        <div class="side-bar">
-            <div class="side-item">
-                <img class="side-icon" src="https://cdn-icons-png.flaticon.com/512/1077/1077035.png" alt="Like">
-                <span class="side-text">24.5K</span>
+        <div class="top-bar">
+            <svg class="back-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+
+            <div class="filter-pill">
+                <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                <span>Filters</span>
             </div>
-            <div class="side-item">
-                <img class="side-icon" src="https://cdn-icons-png.flaticon.com/512/1380/1380338.png" alt="Comment">
-                <span class="side-text">402</span>
+        </div>
+
+        <div class="right-actions">
+            <div class="action-btn">
+                <div class="icon-circle">
+                    <svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                </div>
+                <span class="action-text">93</span>
             </div>
-            <div class="side-item">
-                <img class="side-icon" src="https://cdn-icons-png.flaticon.com/512/929/929610.png" alt="Share">
-                <span class="side-text">Share</span>
+
+            <div class="action-btn">
+                <div class="icon-circle">
+                    <svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="none" fill="white"></path>
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="white" stroke-width="2" stroke-linejoin="round" fill="none"></path>
+                    </svg>
+                </div>
+                <span class="action-text">Share</span>
+            </div>
+
+            <div class="action-btn">
+                <div class="icon-circle">
+                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 4V2m0 20v-2M5 15l-2-2m18 0l-2 2M5 9l-2 2m18 0l-2-2"></path>
+                        <line x1="15" y1="12" x2="15" y2="12"></line> 
+                        <path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1 3-6z" fill="white" stroke="none" transform="scale(0.6) translate(8, 8)"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="dots-menu">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
             </div>
         </div>
 
         <div class="bottom-info">
-            <div class="nickname">@Sweet_Alice <div class="verify-badge">✓</div></div>
-            <div class="description">
-                Check my private video in bio... 😈 <br>
-                <span class="tags">#viral #reels #trend</span>
+            <div class="user-row">
+                <div class="avatar" style="background: #ff0050;"></div>
+                <div class="username">@Sweet_Alice</div>
+            </div>
+            <div class="desc">
+                Do you like my view? 😈 <br>
+                Check link in bio... 👇
             </div>
         </div>
     </div>
@@ -187,35 +202,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const video = document.getElementById("main-video");
     const swipeHint = document.getElementById("swipe-hint");
     
-    // Получаем ID видео из URL (?v=2) или ставим дефолт
     const urlParams = new URLSearchParams(window.location.search);
     const vParam = urlParams.get('v');
-    video.src = "./assets/videos/" + (vParam ? `video-${vParam}.mp4` : "video-1.mp4");
-    
-    // Запускаем видео без звука сразу (muted autoplay)
+    video.src = (vParam ? `${vParam}.mp4` : "1.mp4"); // Если видео в корне
+    // video.src = "./assets/videos/" + (vParam ? `video-${vParam}.mp4` : "video-1.mp4"); // Если в папке
+
     video.play().catch(() => console.log("Autoplay blocked"));
 
     let isFirstInteraction = true;
 
-    // ПЕРЕХВАТЧИК КЛИКОВ
-    // useCapture = true гарантирует, что мы поймаем клик ДО твоего скрипта редиректа
     document.addEventListener("click", function(e) {
         if (isFirstInteraction) {
-            // Блокируем всплытие, чтобы твой скрипт внизу НЕ сработал
             e.stopImmediatePropagation();
             e.preventDefault();
-            
-            // Визуальная магия
             isFirstInteraction = false;
-            swipeHint.style.display = 'none'; // Скрываем палец
-            video.muted = false; // Включаем звук
-            video.play(); // Пинаем видео на всякий случай
-            
-            console.log("MAGIA: Sound ON, Hint OFF. Redirect blocked.");
-        } else {
-            console.log("MAGIA: Second click. Allowing redirect...");
-            // Второй клик пройдет дальше к твоему скрипту
-        }
+            swipeHint.style.display = 'none';
+            video.muted = false;
+            video.play();
+        } 
     }, true); 
 });
 </script>
