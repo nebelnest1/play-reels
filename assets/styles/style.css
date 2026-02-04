@@ -1,0 +1,312 @@
+/* =========================
+   BASE
+   ========================= */
+
+body.body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Центрируем плеер */
+.xh-player-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* =========================
+   PLAYER CONTAINER
+   ========================= */
+
+.xh-fake-player {
+    width: 100%;
+    max-width: 1220px;
+    aspect-ratio: 16 / 9;
+    position: relative;
+    overflow: hidden;
+    background: #000;
+}
+
+/* =========================
+   PREVIEW IMAGE
+   ========================= */
+
+.xh-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+
+    opacity: 0;
+    transition: opacity 0.25s ease-out;
+    z-index: 0;
+}
+
+.xh-frame.loaded {
+    opacity: 1;
+}
+
+/* =========================
+   MICRO NOISE OVERLAY
+   ========================= */
+
+.xh-fake-player::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+
+    background-image:
+        repeating-radial-gradient(
+            circle at 0 0,
+            rgba(255,255,255,0.035),
+            rgba(255,255,255,0.035) 1px,
+            transparent 1px,
+            transparent 2px
+        );
+
+    opacity: 0.18;
+    mix-blend-mode: overlay;
+}
+
+/* =========================
+   BOTTOM DARK GRADIENT
+   ========================= */
+
+.xh-fake-player::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 45%;
+    background: linear-gradient(0deg, rgba(0,0,0,0.75), transparent);
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* =========================
+   PLAY BUTTON
+   ========================= */
+
+.xh-play-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(.85);
+  z-index: 6;
+
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  opacity: 0;
+}
+
+/* состояние, когда можно жать */
+.xh-play-btn.ready {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  animation: pulsePlay 2.4s ease-in-out infinite;
+}
+
+.xh-play-btn svg {
+  width: 100%;
+  height: 100%;
+  fill: white;
+  filter:
+    drop-shadow(0 0 6px rgba(255,255,255,.6))
+    drop-shadow(0 0 2px rgba(255,255,255,.8));
+}
+
+
+.xh-play-btn.ready:active {
+  transform: translate(-50%, -50%) scale(0.96);
+}
+/* Adaptive sizes */
+@media (min-width: 480px) {
+    .xh-play-btn {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+@media (min-width: 768px) {
+    .xh-play-btn {
+        width: 150px;
+        height: 150px;
+    }
+}
+
+/* Animations */
+@keyframes playFadeIn {
+    from { opacity: 0; transform: scale(0.85); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulsePlay {
+    0%   { transform: translate(-50%, -50%) scale(1); }
+    50%  { transform: translate(-50%, -50%) scale(1.07); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+/* =========================
+   BOTTOM BAR
+   ========================= */
+
+.xh-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+
+    padding: 28px 20px;
+    box-sizing: border-box;
+
+    background: linear-gradient(0deg, rgba(0,0,0,0.85), transparent);
+    pointer-events: none;
+
+    z-index: 1;
+
+    opacity: 1;
+    transform: translateY(20px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.xh-bottom-bar.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* =========================
+   PROGRESS BAR
+   ========================= */
+
+.xh-progress {
+    height: 5px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 3px;
+    margin-bottom: 12px;
+
+    position: relative;
+    overflow: hidden;
+}
+
+.xh-progress::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 25%;
+    background: linear-gradient(90deg, #ffffff, #e5e5e5);
+    animation: fakeProgress 6s linear infinite;
+}
+
+@keyframes fakeProgress {
+    from { transform: translateX(0); }
+    to   { transform: translateX(400%); }
+}
+
+/* =========================
+   CONTROLS
+   ========================= */
+
+.xh-controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.xh-time {
+    color: #fff;
+    font-size: 17px;
+    opacity: 0.95;
+}
+
+.xh-icons {
+    display: flex;
+    gap: 18px;
+}
+
+.xh-icon {
+    width: 28px;
+    height: 28px;
+    fill: #fff;
+    opacity: 0.95;
+    transition: opacity 0.15s ease-out;
+}
+
+.xh-icon:active {
+    opacity: 0.55;
+}
+
+.xh-fake-player {
+  position: relative;
+}
+
+.xh-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.25);
+  z-index: 5;
+}
+
+.xh-loader::after {
+  content: "";
+  width: 36px;
+  height: 36px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.xh-play-btn {
+  opacity: 0;
+  transform: scale(.85);
+  transition: all .4s ease;
+  z-index: 6;
+}
+.xh-play-btn {
+  width: min(80px, 22vw);
+  height: min(80px, 22vw);
+}
+
+.xh-play-btn.ready {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* базовое состояние */
+.xh-play-btn svg {
+  filter:
+    drop-shadow(0 0 6px rgba(255,255,255,.6))
+    drop-shadow(0 0 2px rgba(255,255,255,.8));
+  transition: filter .12s ease-out, transform .12s ease-out;
+}
+
+/* pressed glow — ТОЛЬКО при тапе */
+.xh-play-btn.ready:active svg {
+  filter:
+    drop-shadow(0 0 14px rgba(255,255,255,.95))
+    drop-shadow(0 0 6px rgba(255,255,255,1));
+  transform: scale(1.03);
+}
+
