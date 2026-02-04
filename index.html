@@ -204,8 +204,25 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const urlParams = new URLSearchParams(window.location.search);
     const vParam = urlParams.get('v');
-    video.src = (vParam ? `${vParam}.mp4` : "1.mp4"); // Если видео в корне
-    // video.src = "./assets/videos/" + (vParam ? `video-${vParam}.mp4` : "video-1.mp4"); // Если в папке
+
+    // --- НАСТРОЙКА ПУТИ К ВИДЕО (ВЫБЕРИ ОДИН ВАРИАНТ) ---
+
+    // ВАРИАНТ 1: Файлы лежат рядом с index.html и называются 1.mp4, 2.mp4
+    // video.src = (vParam ? vParam + ".mp4" : "1.mp4");
+
+    // ВАРИАНТ 2: Файлы лежат рядом, но называются video-1.mp4, video-2.mp4 (ЧАЩЕ ВСЕГО ТАК)
+    video.src = (vParam ? "video-" + vParam + ".mp4" : "video-1.mp4");
+
+    // ВАРИАНТ 3: Файлы лежат в папке assets/videos/
+    // video.src = "./assets/videos/" + (vParam ? "video-" + vParam + ".mp4" : "video-1.mp4");
+
+    // -----------------------------------------------------
+
+    // Обработчик ошибок (чтобы понять, почему не грузит)
+    video.onerror = function() {
+        console.error("ОШИБКА: Не могу найти видео по пути:", video.src);
+        alert("Video file not found: " + video.src.split('/').pop());
+    };
 
     video.play().catch(() => console.log("Autoplay blocked"));
 
