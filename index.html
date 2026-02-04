@@ -22,8 +22,30 @@
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         
-        .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; }
-        .xh-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: #000; }
+        .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; background: #000; }
+        
+        /* Видео */
+        .xh-video { 
+            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: #000; 
+            transition: opacity 0.3s ease;
+            opacity: 1;
+        }
+        /* Скрываем видео, пока оно не загрузилось, чтобы не было черных миганий */
+        .xh-video.loading { opacity: 0; }
+
+        /* Лоадер (Крутилка) */
+        .loader-container {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 5; display: none; pointer-events: none;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
 
         /* Оверлей UI */
         .reels-ui { 
@@ -39,6 +61,7 @@
             z-index: 50; display: none; /* Скрыто по умолчанию */
             flex-direction: column; align-items: center; justify-content: center; gap: 15px;
             pointer-events: none;
+            width: 100%;
         }
 
         .glass-btn {
@@ -52,16 +75,17 @@
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
             animation: pulseGlass 2s infinite;
             pointer-events: auto;
-            transition: transform 0.2s;
+            transition: transform 0.1s;
+            max-width: 90%;
         }
         .glass-btn:active { transform: scale(0.95); }
 
-        .glass-icon { width: 20px; height: 20px; fill: white; }
+        .glass-icon { width: 24px; height: 24px; fill: white; flex-shrink: 0; }
         
         .glass-text {
             color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 0.5px;
             text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-            white-space: nowrap;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
         @keyframes pulseGlass {
@@ -116,6 +140,8 @@
         <source src="" type="video/mp4">
     </video>
 
+    <div id="loader" class="loader-container"><div class="spinner"></div></div>
+
     <div id="swipe-hint" class="swipe-hint"><div class="hand-icon">👆</div></div>
 
     <div id="click-hint" class="click-hint-overlay">
@@ -132,8 +158,19 @@
         </div>
         <div class="right-actions">
             <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div><span class="action-text">93</span></div>
+            
             <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg></div><span class="action-text">Share</span></div>
-            <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2m0 20v-2M5 15l-2-2m18 0l-2 2M5 9l-2 2m18 0l-2-2"></path><line x1="15" y1="12" x2="15" y2="12"></line></svg></div></div>
+            
+            <div class="action-btn">
+                <div class="icon-circle">
+                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14.5 4l-9.5 9.5a2.5 2.5 0 0 0 3.5 3.5l9.5-9.5"/>
+                        <path d="M18 7L21 4" stroke-width="2.5"/><path d="M14 10L12 7" stroke-width="2"/><path d="M20 10L22 13" stroke-width="2"/>
+                        <path d="M19.5 2.5l1 1-1 1-1-1 1-1z" fill="white" stroke="none"/>
+                    </svg>
+                </div>
+            </div>
+
             <div class="dots-menu"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
         </div>
         <div class="bottom-info">
@@ -149,9 +186,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const swipeHint = document.getElementById("swipe-hint");
     const clickHint = document.getElementById("click-hint");
     const langText = document.getElementById("lang-text");
+    const loader = document.getElementById("loader");
     const wrapper = document.querySelector('.reels-wrapper');
 
-    // --- 1. ПЕРЕВОДЫ ---
+    // --- 1. ВСЕ ЯЗЫКИ ---
     const translations = {
         'en': "Continue Watching",
         'ru': "Смотреть дальше",
@@ -160,80 +198,116 @@ document.addEventListener("DOMContentLoaded", () => {
         'fr': "Continuer à regarder",
         'pt': "Continuar assistindo",
         'it': "Continua a guardare",
-        'tr': "İzlemeye devam et"
+        'tr': "İzlemeye devam et",
+        'ar': "متابعة المشاهدة",      
+        'zh': "继续观看",            
+        'ja': "視聴を続ける",          
+        'ko': "계속 시청하기",          
+        'hi': "देखना जारी रखें",       
+        'id': "Lanjutkan Menonton",  
+        'vi': "Tiếp tục xem",        
+        'th': "ดูต่อ"                
     };
 
-    // Определяем язык (берем первые 2 буквы, например "ru-RU" -> "ru")
+    // Авто-определение языка
     const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
     langText.innerText = translations[userLang] || translations['en'];
+    
+    // Арабский RTL фикс
+    if (userLang === 'ar') {
+        document.querySelector('.glass-btn').style.direction = 'rtl';
+    }
 
-    // --- 2. НАСТРОЙКИ ВИДЕО ---
+    // --- 2. НАСТРОЙКИ ---
     const urlParams = new URLSearchParams(window.location.search);
     const offerID = urlParams.get('v') || '1';
     let currentReelIndex = 1;
-    const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
+    
+    // Anti-Cache timestamp, чтобы телеграм не кешировал битое видео
+    const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4?t=${Date.now()}`;
 
     video.src = getPath(currentReelIndex);
     
-    // Если ошибка - перезагружаем с 1-го
     video.onerror = function() {
         if (currentReelIndex > 1) {
-            console.log("Video not found, resetting to 1");
+            console.log("Video not found, looping");
             currentReelIndex = 1; 
             video.src = getPath(currentReelIndex); 
             video.load(); 
             video.play().catch(()=>{});
         }
     };
-    // Старт первого видео
     video.play().catch(() => {});
 
-    let stage = 1; // 1 = Свайп разрешен, 2 = Только Клик
+    let stage = 1; 
     let touchStartY = 0;
     let touchEndY = 0;
     let isAnimating = false;
 
-    // --- 3. СМЕНА ВИДЕО (SAFE SWITCH) ---
+    // --- 3. СМЕНА ВИДЕО (WEBVIEW FIX) ---
     function triggerVisualSwipe() {
         if (isAnimating) return;
         isAnimating = true;
 
         swipeHint.style.display = 'none';
+        
+        // 1. Анимация ухода
         video.classList.add('slide-out-up');
 
         setTimeout(() => {
             currentReelIndex++; 
             const nextSource = getPath(currentReelIndex);
             
-            // WEBVIEW FIX: Сначала меняем сурс, потом грузим, потом ждем готовности
+            // 2. Скрываем видео и показываем ЛОАДЕР
+            video.classList.add('loading');
+            loader.style.display = 'block'; // Показываем крутилку
+            
             video.src = nextSource;
-            video.load();
+            video.load(); 
 
-            // Функция запуска после загрузки
-            const playPromise = () => {
-                video.play().catch((e) => {
-                    console.error("AutoPlay Blocked:", e);
-                    // Если блок автоплея - сразу показываем кнопку, чтобы юзер нажал
+            // Функция запуска (когда видео готово)
+            const playVideo = () => {
+                video.play().then(() => {
+                    // Успех
+                    loader.style.display = 'none';
+                    video.classList.remove('loading');
+                    
+                    video.classList.remove('slide-out-up');
+                    video.classList.add('slide-in-up');
+
+                    setTimeout(() => {
+                        showButton();
+                        video.classList.remove('slide-in-up');
+                        isAnimating = false;
+                        stage = 2; 
+                    }, 400);
+
+                }).catch((e) => {
+                    console.error("Play blocked:", e);
+                    // Если блок - всё равно показываем кнопку и убираем лоадер
+                    loader.style.display = 'none';
                     showButton();
                 });
             };
 
-            // Ждем пока видео реально подгрузится (фикс черного экрана)
+            // Ждем готовности
             video.oncanplay = function() {
-                playPromise();
-                video.oncanplay = null; // убираем листенер
+                playVideo();
+                video.oncanplay = null;
             };
 
-            video.classList.remove('slide-out-up');
-            video.classList.add('slide-in-up');
-
-            // Показываем кнопку
+            // ТАЙМАУТ БЕЗОПАСНОСТИ (2.5 сек)
+            // Если видео тяжелое и не грузится в ТГ - просто покажем кнопку, 
+            // чтобы юзер мог кликнуть и уйти на оффер, а не пялиться в черный экран.
             setTimeout(() => {
-                showButton();
-                video.classList.remove('slide-in-up');
-                isAnimating = false;
-                stage = 2; 
-            }, 400);
+                if (stage === 1) {
+                    console.log("Timeout reached. Force show button.");
+                    loader.style.display = 'none';
+                    showButton();
+                    stage = 2;
+                }
+            }, 2500);
+
         }, 350);
     }
 
@@ -241,7 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
         clickHint.style.display = 'flex';
     }
 
-    // --- ЛОВИМ СВАЙПЫ ---
+    // --- СВАЙПЫ ---
     wrapper.addEventListener('touchstart', function(e) {
         touchStartY = e.changedTouches[0].screenY;
     }, {passive: true});
@@ -249,14 +323,11 @@ document.addEventListener("DOMContentLoaded", () => {
     wrapper.addEventListener('touchend', function(e) {
         touchEndY = e.changedTouches[0].screenY;
         if (touchStartY - touchEndY > 50) { 
-            // СВАЙП ВВЕРХ
             if (stage === 1) {
-                // ЭТАП 1
                 const fakeClick = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
                 wrapper.dispatchEvent(fakeClick); 
                 triggerVisualSwipe();
             } else {
-                // ЭТАП 2: БЛОКИРОВКА
                 const btn = document.querySelector('.glass-btn');
                 if(btn) {
                     clickHint.classList.remove('shake');
@@ -267,7 +338,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, {passive: true});
 
-    // --- ЛОВИМ КЛИКИ ---
+    // --- КЛИКИ ---
     wrapper.addEventListener("click", function(e) {
         if (!e.isTrusted && stage === 1) { e.stopPropagation(); return; }
 
@@ -275,8 +346,7 @@ document.addEventListener("DOMContentLoaded", () => {
             e.stopPropagation(); e.stopImmediatePropagation();
             triggerVisualSwipe();
         } else {
-            // ЭТАП 2: Клик разрешен (летит в MainExit)
-            console.log("Final Click -> MainExit Script Activated");
+            console.log("Click -> Exit");
         }
     }); 
 });
