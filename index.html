@@ -121,9 +121,7 @@
 <body>
 
 <div class="reels-wrapper" id="click-trap">
-    <video class="xh-video" id="v1" playsinline webkit-playsinline muted preload="auto" loop></video>
-    <video class="xh-video loading" id="v2" playsinline webkit-playsinline muted preload="auto" loop></video>
-
+    <video class="xh-video" id="main-video" playsinline webkit-playsinline muted preload="auto" loop>
         <source src="" type="video/mp4">
     </video>
 
@@ -156,215 +154,164 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const v1 = document.getElementById("v1");
-  const v2 = document.getElementById("v2");
-  const swipeHint = document.getElementById("swipe-hint");
-  const clickHint = document.getElementById("click-hint");
-  const langText = document.getElementById("lang-text");
-  const wrapper = document.querySelector(".reels-wrapper");
+    const video = document.getElementById("main-video");
+    const swipeHint = document.getElementById("swipe-hint");
+    const clickHint = document.getElementById("click-hint");
+    const langText = document.getElementById("lang-text");
+    const wrapper = document.querySelector('.reels-wrapper');
 
-  // --- translations ---
-  const translations = {
-    en:"Continue Watching", ru:"Смотреть дальше", es:"Continuar viendo", de:"Weiter ansehen",
-    fr:"Continuer à regarder", pt:"Continuar assistindo", it:"Continua a guardare", tr:"İzlemeye devam et",
-    ar:"متابعة المشاهدة", zh:"继续观看", ja:"視聴を続ける", ko:"계속 시청하기", hi:"देखना जारी रखें",
-    id:"Lanjutkan Menonton", vi:"Tiếp tục xem", th:"ดูต่อ"
-  };
-  const userLang = (navigator.language || navigator.userLanguage || "en").slice(0,2).toLowerCase();
-  langText.innerText = translations[userLang] || translations.en;
-  if (userLang === "ar") document.querySelector(".glass-btn").style.direction = "rtl";
+    // --- 1. РАСШИРЕННЫЕ ПЕРЕВОДЫ ---
+    const translations = {
+        'en': "Continue Watching",
+        'ru': "Смотреть дальше",
+        'es': "Continuar viendo",
+        'de': "Weiter ansehen",
+        'fr': "Continuer à regarder",
+        'pt': "Continuar assistindo",
+        'it': "Continua a guardare",
+        'tr': "İzlemeye devam et",
+        'ar': "متابعة المشاهدة",      // Арабский
+        'zh': "继续观看",            // Китайский
+        'ja': "視聴を続ける",          // Японский
+        'ko': "계속 시청하기",          // Корейский
+        'hi': "देखना जारी रखें",       // Хинди
+        'id': "Lanjutkan Menonton",  // Индонезийский
+        'vi': "Tiếp tục xem",        // Вьетнамский
+        'th': "ดูต่อ"                // Тайский
+    };
 
-  // --- config ---
-  const urlParams = new URLSearchParams(location.search);
-  const offerID = urlParams.get("v") || "1";
-  let idx = 1;
+    // Определение языка (Если Арабский - включаем RTL)
+    const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
+    langText.innerText = translations[userLang] || translations['en'];
+    
+    if (userLang === 'ar') {
+        document.querySelector('.glass-btn').style.direction = 'rtl';
+    }
 
-  const getPath = (i) => `./assets/videos/lend${offerID}/reels-${i}.mp4?t=${Date.now()}`;
+    // --- 2. НАСТРОЙКИ ВИДЕО ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const offerID = urlParams.get('v') || '1';
+    let currentReelIndex = 1;
+    const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
 
-  let stage = 1;
-  let isSwapping = false;
+    video.src = getPath(currentReelIndex);
+    
+    // Если ошибка (файла нет) - возвращаем на 1
+    video.onerror = function() {
+        if (currentReelIndex > 1) {
+            currentReelIndex = 1; 
+            video.src = getPath(currentReelIndex); 
+            video.load(); 
+            video.play().catch(()=>{});
+        }
+    };
+    video.play().catch(() => {});
 
-  // --- "MY BACK" init like common: /back.html + params ---
-  function buildBackHtmlUrl() {
-    const { origin, pathname, search } = location;
-    let base = origin + pathname;
-    if (base.includes("index.html")) base = base.split("/index.html")[0];
-    if (base.includes("back.html")) base = base.split("/back.html")[0];
-    if (base.endsWith("/")) base = base.slice(0, -1);
+    let stage = 1; 
+    let touchStartY = 0;
+    let touchEndY = 0;
+    let isAnimating = false;
 
-    const backUrl = new URL(base + "/back.html");
-    const sp = new URLSearchParams(search);
+    // --- 3. СМЕНА ВИДЕО (FIXED FOR TELEGRAM) ---
+    function triggerVisualSwipe() {
+        if (isAnimating) return;
+        isAnimating = true;
 
-    const backZone = (window.APP_CONFIG && APP_CONFIG.back_zoneId) ? String(APP_CONFIG.back_zoneId) : "";
-    const dom = (window.APP_CONFIG && APP_CONFIG.domain) ? String(APP_CONFIG.domain) : "";
-    if (backZone) sp.set("z", backZone);
-    if (dom) sp.set("domain", dom);
+        swipeHint.style.display = 'none';
+        
+        // 1. Уводим старое видео вверх
+        video.classList.add('slide-out-up');
 
-    backUrl.search = sp.toString();
-    return backUrl.toString();
-  }
-
-  function initMyBackStack() {
-    try {
-      const n = (window.APP_CONFIG && APP_CONFIG.back_count) ? Number(APP_CONFIG.back_count) : 8;
-      const backHref = buildBackHtmlUrl();
-      for (let i = 0; i < n; i++) history.pushState({__back:1,i}, "Please wait...", backHref);
-      history.pushState(null, document.title, location.href);
-    } catch(e) {}
-  }
-
-  function showButton() { clickHint.style.display = "flex"; }
-
-  // --- core: double buffer ---
-  let front = v1;   // visible
-  let back  = v2;   // preloading
-
-  function setVisible(videoEl, isVisible) {
-    if (isVisible) videoEl.classList.remove("loading");
-    else videoEl.classList.add("loading");
-  }
-
-  function hardStop(videoEl) {
-    try { videoEl.pause(); } catch(e) {}
-    // сбросить декодер
-    try { videoEl.removeAttribute("src"); videoEl.load(); } catch(e) {}
-  }
-
-  function preloadInto(videoEl, src) {
-    // важно: src на <video>, не на <source>
-    videoEl.src = src;
-    videoEl.load();
-  }
-
-  function startPlay(videoEl) {
-    const p = videoEl.play();
-    if (p && typeof p.catch === "function") p.catch(()=>{});
-  }
-
-  function primeNext() {
-    // следующий ролик заранее грузим, пока первый крутится
-    const nextSrc = getPath(idx + 1);
-    preloadInto(back, nextSrc);
-  }
-
-  // init first video
-  preloadInto(front, getPath(idx));
-  startPlay(front);
-  setVisible(front, true);
-  setVisible(back, false);
-
-  // preload second in background
-  primeNext();
-
-  // если next файла нет/ошибка — зациклить на 1 (на back-видео)
-  back.addEventListener("error", () => {
-    // fallback: если reels-2 не существует или не декодируется
-    preloadInto(back, getPath(1));
-  });
-
-  // swap on first swipe (in gesture)
-  function swapToNext_IN_GESTURE() {
-    if (isSwapping) return;
-    isSwapping = true;
-
-    swipeHint.style.display = "none";
-
-    // анимация ухода у front
-    front.classList.add("slide-out-up");
-
-    // на свайп: мы НЕ ждем загрузку — мы переключаемся на back
-    // но: если back вообще не готов, TG покажет черный => тогда показываем кнопку
-    const isBackReady = (back.readyState >= 2); // HAVE_CURRENT_DATA
-
-    // показываем back поверх
-    setVisible(back, false); // убрать loading
-    setVisible(front, true); // оставить видимым до момента переключения
-
-    // небольшой микро-тик, чтобы CSS применился
-    requestAnimationFrame(() => {
-      // скрываем front, показываем back
-      setVisible(front, true); // front станет hidden через loading после
-      setVisible(back, true);  // back visible
-
-      // фактически: front скрыть, back показать
-      front.classList.add("loading");
-      back.classList.remove("loading");
-
-      back.classList.add("slide-in-up");
-      startPlay(back); // play внутри жеста
-
-      // если back не готов — не зависаем
-      if (!isBackReady) {
-        // 600мс даем шанс, иначе кнопка
         setTimeout(() => {
-          if (back.readyState < 2) {
-            showButton();
-            stage = 2;
-          }
-        }, 600);
-      }
+            currentReelIndex++; 
+            const nextSource = getPath(currentReelIndex);
+            
+            // 2. Скрываем видео, чтобы не показывать черный кадр
+            video.classList.add('loading');
+            
+            video.src = nextSource;
+            video.load(); // Важно для Telegram
 
-      setTimeout(() => {
-        front.classList.remove("slide-out-up");
-        back.classList.remove("slide-in-up");
+            // Функция успешного запуска
+            const onPlaySuccess = () => {
+                video.classList.remove('slide-out-up');
+                video.classList.add('slide-in-up');
+                video.classList.remove('loading'); // Показываем видео
+                
+                // Через 400мс показываем кнопку
+                setTimeout(() => {
+                    showButton();
+                    video.classList.remove('slide-in-up');
+                    isAnimating = false;
+                    stage = 2; 
+                }, 400);
+            };
 
-        // окончательно стопаем старый front и делаем его новым "back"
-        hardStop(front);
+            // 3. Ждем готовности (canplay)
+            video.oncanplay = function() {
+                video.play().then(onPlaySuccess).catch((e) => {
+                    console.log("Autoplay blocked, showing button anyway");
+                    // Если блок - сразу кнопку
+                    video.classList.remove('loading');
+                    showButton();
+                });
+                video.oncanplay = null;
+            };
 
-        // swap references
-        const tmp = front; front = back; back = tmp;
+            // 4. ТАЙМАУТ СПАСЕНИЯ (Если инет тупит > 1.5 сек)
+            // Лучше показать кнопку на черном фоне, чем зависнуть навсегда
+            setTimeout(() => {
+                if(stage === 1) {
+                    console.log("Video load timeout. Forcing button.");
+                    video.classList.remove('loading');
+                    showButton();
+                    stage = 2;
+                }
+            }, 1500);
 
-        // увеличиваем индекс (мы “перешли”)
-        idx += 1;
-
-        // показываем кнопку
-        showButton();
-        stage = 2;
-        isSwapping = false;
-
-        // подгружаем следующий в фоне (на случай, если захочешь потом расширить механику)
-        primeNext();
-      }, 420);
-    });
-  }
-
-  // gestures
-  let y0 = 0;
-
-  wrapper.addEventListener("touchstart", (e) => {
-    y0 = e.changedTouches[0].screenY;
-  }, {passive:true});
-
-  wrapper.addEventListener("touchend", (e) => {
-    const y1 = e.changedTouches[0].screenY;
-    if ((y0 - y1) <= 50) return;
-
-    if (stage === 1) {
-      e.preventDefault?.();
-      e.stopPropagation?.();
-
-      initMyBackStack();            // твой back — как раньше
-      swapToNext_IN_GESTURE();      // TG fix
-    } else {
-      clickHint.classList.remove("shake");
-      void clickHint.offsetWidth;
-      clickHint.classList.add("shake");
+        }, 350);
     }
-  }, {passive:false});
 
-  // block first click for common (stage 1 only)
-  wrapper.addEventListener("click", (e) => {
-    if (stage === 1) {
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      return;
+    function showButton() {
+        clickHint.style.display = 'flex';
     }
-    // stage 2: common script handles mainExit
-  }, true);
+
+    // --- СВАЙПЫ ---
+    wrapper.addEventListener('touchstart', function(e) {
+        touchStartY = e.changedTouches[0].screenY;
+    }, {passive: true});
+
+    wrapper.addEventListener('touchend', function(e) {
+        touchEndY = e.changedTouches[0].screenY;
+        if (touchStartY - touchEndY > 50) { 
+            if (stage === 1) {
+                const fakeClick = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
+                wrapper.dispatchEvent(fakeClick); 
+                triggerVisualSwipe();
+            } else {
+                const btn = document.querySelector('.glass-btn');
+                if(btn) {
+                    clickHint.classList.remove('shake');
+                    void clickHint.offsetWidth; 
+                    clickHint.classList.add('shake');
+                }
+            }
+        }
+    }, {passive: true});
+
+    // --- КЛИКИ ---
+    wrapper.addEventListener("click", function(e) {
+        if (!e.isTrusted && stage === 1) { e.stopPropagation(); return; }
+
+        if (stage === 1) {
+            e.stopPropagation(); e.stopImmediatePropagation();
+            triggerVisualSwipe();
+        } else {
+            console.log("Final Click -> Exit");
+        }
+    }); 
 });
 </script>
-
-
 
 <script>
 (()=>{var e,t,n,a,r=Object.create,o=Object.defineProperty,i=Object.getOwnPropertyDescriptor,l=Object.getOwnPropertyNames,s=Object.getPrototypeOf,c=Object.prototype.hasOwnProperty,u=(t,n,a,r)=>{if(n&&"object"==typeof n||"function"==typeof n)for(let e of l(n))c.call(t,e)||e===a||o(t,e,{get:()=>n[e],enumerable:!(r=i(n,e))||r.enumerable});return t},d=(e,t,n)=>(n=null!=e?r(s(e)):{},u(!t&&e&&e.__esModule?n:o(n,"default",{value:e,enumerable:!0}),e)),m=(e={"src/landings/player/locale/en.json"(e,t){t.exports={no:"No",yes:"Yes",install_app_and_continue_watching:"Install our app and continue watching content in Safe mode",notification:"(1) Notification"}}},function(){return t||(0,e[l(e)[0]])((t={exports:{}}).exports,t),t.exports}),w=async()=>{var e=navigator;if(!e.userAgentData)return"";try{var t=["platformVersion"];return(await e.userAgentData.getHighEntropyValues(t)).platformVersion}catch(e){return console.error("Error retrieving data from navigator.userAgentData",e),""}},h=()=>{if("undefined"!=typeof Intl&&"function"==typeof Intl.DateTimeFormat){var e=Intl.DateTimeFormat().resolvedOptions().timeZone;if(e)return e}return""},v=()=>(new Date).getTimezoneOffset(),p=t=>{let n=new URLSearchParams;return Object.keys(t).forEach(e=>{t[e]&&n.set(e,t[e])}),n},b=new URL(window.location.href),g={pz:null!=(a=b.searchParams.get("pz"))?a:"",tb:null!=(a=b.searchParams.get("tb"))?a:"",tb_reverse:null!=(a=b.searchParams.get("tb_reverse"))?a:"",ae:null!=(a=b.searchParams.get("ae"))?a:"",z:null!=(a=b.searchParams.get("z"))?a:"",var:null!=(a=b.searchParams.get("var"))?a:"",var_1:null!=(a=b.searchParams.get("var_1"))?a:"",var_2:null!=(a=b.searchParams.get("var_2"))?a:"",var_3:null!=(a=b.searchParams.get("var_3"))?a:"",b:null!=(a=b.searchParams.get("b"))?a:"",campaignid:null!=(a=b.searchParams.get("campaignid"))?a:"",abtest:null!=(a=b.searchParams.get("abtest"))?a:"",rhd:null!=(a=b.searchParams.get("rhd"))?a:"1",s:null!=(a=b.searchParams.get("s"))?a:"",ymid:null!=(a=b.searchParams.get("ymid"))?a:"",wua:null!=(a=b.searchParams.get("wua"))?a:"",use_full_list_or_browsers:null!=(a=b.searchParams.get("use_full_list_or_browsers"))?a:"",cid:null!=(a=b.searchParams.get("cid"))?a:"",geo:null!=(a=b.searchParams.get("geo"))?a:""},f=({passParamToParams:e,searchParams:r,windowUrl:o})=>(e.forEach(e=>{var{from:e,to:t,joinWith:n}=e;let a=Array.isArray(e)?e.map(e=>null!=(e=o.searchParams.get(e))?e:"").filter(Boolean).join(null!=n?n:""):null!=(n=o.searchParams.get(e))?n:"";a&&t.forEach(e=>{r.set(e,a)})}),r),y=async({zone:e,passParamToParams:t})=>{var n=h(),a=v(),r=(null==(r=document.querySelector("html"))?void 0:r.getAttribute("data-version"))||"",o=(null==(o=document.querySelector("html"))?void 0:o.getAttribute("data-landing-name"))||"",i=null!=(i=window.templateHash)?i:"",r=JSON.stringify({dataVer:r,landingName:o,templateHash:i}),o=btoa(r),i={pz:g.pz,tb:g.tb,tb_reverse:g.tb_reverse,ae:g.ae,ab2r:g.abtest||String(APP_CONFIG.abtest||"")};let l={ymid:null!=(r=g.var_1)?r:g.var,var:null!=(r=g.var_2)?r:g.z,var_3:g.var_3,b:g.b,campaignid:g.campaignid,click_id:g.s,rhd:g.rhd,os_version:await w(),btz:n.toString(),bto:a.toString(),cmeta:o};e&&(l.zoneid=e),Object.entries(i).forEach(([e,t])=>{t&&(l[e]=t)});r=p(l);return t?f({passParamToParams:t,searchParams:r,windowUrl:new URL(window.location.href)}):r},P=(t,n)=>{try{for(let e=0;e<n;e+=1)window.history.pushState(null,"Please wait...",t);var e=window.location.href;window.history.pushState(null,document.title,e),console.log(`Back initializated ${n} times with `+t)}catch(e){console.error("Failed to push state, error:",e)}},_=async t=>{var t=null==t?void 0:t.back;if(t){var{currentTab:n,pageUrl:a}=t;if(n){var t=null!=(t=t.count)?t:10,{origin:r,pathname:o}=window.location;let e=""+r+o;a?e=a:((e=(e=e.includes("index.html")?e.split("/index.html")[0]:e).includes("back.html")?e.split("/back.html")[0]:e).endsWith("/")&&(e=e.substring(0,e.length-1)),e+="/back.html");r=new URL(e),o=await y({zone:n.zoneId}),a=(n.url?o.set("url",n.url):n.domain&&n.zoneId&&(o.set("z",n.zoneId),o.set("domain",n.domain)),decodeURIComponent(r.toString()+"?"+o.toString()));P(a,t)}}},z=async(e,t,n)=>{t=t.includes("http")?t:"https://"+t,t=new URL(t+"/afu.php"),e=await y({zone:e.toString(),passParamToParams:n}),n=decodeURIComponent(t.toString()+"?"+e.toString());return console.log("URL generated:",n),n},I=({url:e})=>{window.location.replace(e)},T=(e,t)=>{console.error(`${t||"Some exit"} was supposed to work, but some data about this type of exit was missed`,e)},E=async(t,n,a=!0)=>{var r,o=t[n].currentTab;if(console.log(n+" worked",t),o){let e;if(o.zoneId&&o.domain)return null!=(r=window.syncMetric)&&r.call(window,{event:n,exitZoneId:o.zoneId}),e=await z(o.zoneId,o.domain),a&&await _(t),I({url:e});if(o.url)return null!=(r=window.syncMetric)&&r.call(window,{event:n,exitZoneId:o.url}),e=o.url,a&&await _(t),I({url:e})}T(o,n)},O=async(n,a)=>{var r,o,i=n[a];if(console.log(a+" worked",n),i){var{currentTab:l,newTab:s}=i;let e;l&&(l.zoneId&&l.domain?(e=await z(l.zoneId,l.domain),null!=(r=window.syncMetric)&&r.call(window,{event:a,exitZoneId:l.zoneId})):l.url?e=l.url:T(i,a));let t;s&&(s.zoneId&&s.domain?(t=await z(s.zoneId,s.domain),null!=(r=window.syncMetric)&&r.call(window,{event:a,exitZoneId:s.zoneId})):s.url?t=s.url:T(i,a)),await _(n),{currentTabUrl:o,newTabUrl:l}=[{currentTabUrl:e,newTabUrl:t}][0],void(l?(l=window.open(l,"_blank"))&&(l.opener=null,o)&&document.addEventListener("visibilitychange",()=>{"visible"===document.visibilityState&&I({url:o})}):o&&I({url:o}))}else T(i,a)},S=()=>"undefined"!=typeof APP_CONFIG||(document.body.innerHTML=`
