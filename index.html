@@ -99,7 +99,7 @@
 
         .bottom-info { padding: 16px; color: #fff; margin-right: 60px; pointer-events: auto; }
         .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ff0050; border: 1px solid rgba(255,255,255,0.5); }
+        .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ff0050; border: 1px solid rgba(255,255,255,0.5); transition: background-color 0.3s; }
         .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
         .desc { font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
@@ -131,7 +131,7 @@
             <div class="filter-pill"><svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg><span>Filters</span></div>
         </div>
         <div class="right-actions">
-            <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div><span class="action-text">93</span></div>
+            <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div><span class="action-text" id="ui-likes">93</span></div>
             <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg></div><span class="action-text">Share</span></div>
             <div class="action-btn">
                 <div class="icon-circle">
@@ -145,15 +145,32 @@
             <div class="dots-menu"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
         </div>
         <div class="bottom-info">
-            <div class="user-row"><div class="avatar"></div><div class="username">@Sweet_Alice</div></div>
-            <div class="desc">Do you like my view? 😈 <br>Check link in bio... 👇</div>
+            <div class="user-row"><div class="avatar" id="ui-avatar"></div><div class="username" id="ui-username">@Sweet_Alice</div></div>
+            <div class="desc" id="ui-desc">Do you like my view? 😈 <br>Check link in bio... 👇</div>
         </div>
     </div>
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. ПОЛНЫЙ СПИСОК ЯЗЫКОВ
+    // --- 1. ДАННЫЕ РИЛСОВ (Для смены инфы) ---
+    const reelsData = [
+        {}, // 0 index skip
+        { // Video 1
+            user: "@Sweet_Alice",
+            likes: "93",
+            desc: "Do you like my view? 😈 <br>Check link in bio... 👇",
+            color: "#ff0050" 
+        },
+        { // Video 2
+            user: "@Naughty_Kate",
+            likes: "12.4k",
+            desc: "Wait for the end... 💦 <br>Link in bio!",
+            color: "#0095f6" 
+        }
+    ];
+
+    // --- 2. ВСЕ ЯЗЫКИ ---
     const translations = {
         'en': "Continue Watching",
         'ru': "Смотреть дальше",
@@ -173,75 +190,81 @@ document.addEventListener("DOMContentLoaded", () => {
         'th': "ดูต่อ"                
     };
 
-    // Авто-определение (Первые 2 буквы)
     const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
     const langText = document.getElementById("lang-text");
-    
-    // Ставим текст (если нет в списке - английский)
     langText.innerText = translations[userLang] || translations['en'];
     
-    // RTL для арабского
     if (userLang === 'ar') {
         document.querySelector('.glass-btn').style.direction = 'rtl';
     }
 
-    // 2. ИНИЦИАЛИЗАЦИЯ ВИДЕО
+    // --- 3. ИНИЦИАЛИЗАЦИЯ ---
     const v1 = document.getElementById('v1');
     const v2 = document.getElementById('v2');
     const swipeHint = document.getElementById("swipe-hint");
     const clickHint = document.getElementById("click-hint");
     const wrapper = document.querySelector('.reels-wrapper');
 
+    // UI элементы
+    const uiUser = document.getElementById('ui-username');
+    const uiLikes = document.getElementById('ui-likes');
+    const uiDesc = document.getElementById('ui-desc');
+    const uiAvatar = document.getElementById('ui-avatar');
+
     const urlParams = new URLSearchParams(window.location.search);
     const offerID = urlParams.get('v') || '1';
     
-    // Ссылка на файлы
     const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
 
     // Загрузка
     v1.src = getPath(1);
     v1.play().catch(()=>{});
-
     v2.src = getPath(2);
-    v2.load(); // Предзагрузка второго (стоит на паузе)
+    v2.load(); 
 
     let stage = 1; 
     let touchStartY = 0;
     let touchEndY = 0;
 
-    // 3. ФУНКЦИЯ СВАПА (Swap)
+    // --- 4. ФУНКЦИЯ СВАПА ---
     function doSwap() {
-        swipeHint.style.display = 'none'; // Убираем палец
+        swipeHint.style.display = 'none';
 
-        // Меняем слои
+        // Меняем видео
         v1.pause();
-        v1.classList.remove('active'); // Скрываем 1
-
-        v2.classList.add('active'); // Показываем 2
-        
-        // Жмем плей. Если браузер разрешит - будет играть.
-        // Если нет (ТГ тупит) - видео может стоять, но КНОПКА будет.
+        v1.classList.remove('active');
+        v2.classList.add('active');
         v2.play().catch(e => console.log("Autoplay prevent:", e));
 
-        // Сразу показываем кнопку поверх (страховка)
+        // Меняем инфу (Динамический UI)
+        const newData = reelsData[2]; 
+        if (newData) {
+            uiUser.innerText = newData.user;
+            uiLikes.innerText = newData.likes;
+            uiDesc.innerHTML = newData.desc;
+            uiAvatar.style.backgroundColor = newData.color;
+        }
+
+        // Показываем кнопку
         clickHint.style.display = 'flex';
-        
-        stage = 2; // Блокируем свайпы
+        stage = 2; 
     }
 
-    // 4. ТАЧИ (Touch)
+    // --- 5. ОБРАБОТЧИКИ ---
     wrapper.addEventListener('touchstart', function(e) {
         touchStartY = e.changedTouches[0].screenY;
     }, {passive: true});
 
     wrapper.addEventListener('touchend', function(e) {
         touchEndY = e.changedTouches[0].screenY;
-        
-        if (touchStartY - touchEndY > 50) { // Свайп вверх
+        if (touchStartY - touchEndY > 50) { 
             if (stage === 1) {
+                // Back-fix регистрация
+                const fakeClick = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
+                wrapper.dispatchEvent(fakeClick); 
+                
                 doSwap();
             } else {
-                // Если свайпают на 2 этапе - трясем кнопку
                 const btn = document.querySelector('.glass-btn');
                 if(btn) {
                     btn.classList.remove('shake');
@@ -252,12 +275,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, {passive: true});
 
-    // 5. КЛИКИ (Click)
     wrapper.addEventListener("click", function(e) {
+        if (!e.isTrusted && stage === 1) { e.stopPropagation(); return; }
+
         if (stage === 1) {
-            doSwap(); // На 1 этапе клик = свайп
+            e.stopPropagation(); e.stopImmediatePropagation();
+            doSwap(); 
+        } else {
+            console.log("Exit Click");
         }
-        // На 2 этапе клик летит сквозь, попадает в MainExit
     }); 
 });
 </script>
