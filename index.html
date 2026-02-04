@@ -25,7 +25,6 @@
         .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; }
         .xh-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: #000; }
 
-        /* Интерфейс поверх видео */
         .reels-ui { 
             position: absolute; inset: 0; z-index: 10; 
             display: flex; flex-direction: column; justify-content: space-between; 
@@ -33,67 +32,34 @@
             background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
         }
 
-        /* Верхняя панель */
-        .top-bar {
-            padding: 50px 16px 20px; 
-            display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto;
-        }
+        .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
         .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
-        .filter-pill {
-            background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px);
-            border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px;
-            color: #fff; font-size: 13px; font-weight: 500;
-        }
+        .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 500; }
         .filter-icon { width: 14px; height: 14px; }
 
-        /* Боковая панель */
-        .right-actions {
-            position: absolute; right: 8px; bottom: 100px;
-            display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: auto;
-        }
+        .right-actions { position: absolute; right: 8px; bottom: 100px; display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: auto; }
         .action-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .icon-circle {
-            width: 44px; height: 44px; background: rgba(30, 30, 30, 0.65);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(2px); margin-bottom: 2px;
-        }
+        .icon-circle { width: 44px; height: 44px; background: rgba(30, 30, 30, 0.65); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); margin-bottom: 2px; }
         .action-icon { width: 24px; height: 24px; }
         .action-text { font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
         .dots-menu { display: flex; gap: 4px; margin-top: 10px; opacity: 0.8; }
         .dot { width: 4px; height: 4px; background: #fff; border-radius: 50%; }
 
-        /* Нижний блок */
         .bottom-info { padding: 16px; color: #fff; margin-right: 60px; pointer-events: auto; }
         .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
         .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ff0050; border: 1px solid rgba(255,255,255,0.5); }
         .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
         .desc { font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
-        /* Анимация Свайпа (Палец) */
-        .swipe-hint {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 20; pointer-events: none; display: flex; flex-direction: column; align-items: center;
-        }
+        .swipe-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
         .hand-icon { font-size: 50px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: swipeUp 1.8s infinite ease-in-out; }
-        @keyframes swipeUp {
-            0% { transform: translateY(40px); opacity: 0; }
-            40% { opacity: 1; }
-            80% { opacity: 0; }
-            100% { transform: translateY(-60px); opacity: 0; }
-        }
+        @keyframes swipeUp { 0% { transform: translateY(40px); opacity: 0; } 40% { opacity: 1; } 80% { opacity: 0; } 100% { transform: translateY(-60px); opacity: 0; } }
 
-        /* --- Анимации переключения видео --- */
+        /* Анимации */
         .slide-out-up { animation: slideOutUp 0.4s ease-out forwards; }
         .slide-in-up { animation: slideInUp 0.4s ease-out forwards; }
-
-        @keyframes slideOutUp {
-            0% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(-100%); opacity: 0; }
-        }
-        @keyframes slideInUp {
-            0% { transform: translateY(100%); opacity: 0; }
-            100% { transform: translateY(0); opacity: 1; }
-        }
+        @keyframes slideOutUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 0; } }
+        @keyframes slideInUp { 0% { transform: translateY(100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 
@@ -104,26 +70,19 @@
         <source src="" type="video/mp4">
     </video>
 
-    <div id="swipe-hint" class="swipe-hint">
-        <div class="hand-icon">👆</div>
-    </div>
+    <div id="swipe-hint" class="swipe-hint"><div class="hand-icon">👆</div></div>
 
     <div class="reels-ui">
         <div class="top-bar">
             <svg class="back-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-            <div class="filter-pill">
-                <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-                <span>Filters</span>
-            </div>
+            <div class="filter-pill"><svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg><span>Filters</span></div>
         </div>
-
         <div class="right-actions">
             <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div><span class="action-text">93</span></div>
             <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg></div><span class="action-text">Share</span></div>
             <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2m0 20v-2M5 15l-2-2m18 0l-2 2M5 9l-2 2m18 0l-2-2"></path><line x1="15" y1="12" x2="15" y2="12"></line></svg></div></div>
             <div class="dots-menu"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
         </div>
-
         <div class="bottom-info">
             <div class="user-row"><div class="avatar"></div><div class="username">@Sweet_Alice</div></div>
             <div class="desc">Do you like my view? 😈 <br>Check link in bio... 👇</div>
@@ -137,96 +96,115 @@ document.addEventListener("DOMContentLoaded", () => {
     const swipeHint = document.getElementById("swipe-hint");
     const wrapper = document.querySelector('.reels-wrapper');
 
-    // Настройка видео
-    const urlParams = new URLSearchParams(window.location.search);
-    const vParam = urlParams.get('v');
-    const folderPath = "./assets/videos/"; 
-    const fileName = vParam ? `video-${vParam}.mp4` : "video-1.mp4";
-    
-    video.src = folderPath + fileName;
-    
-    video.onerror = function() { console.error("Video Error:", video.src); };
+    // --- НАСТРОЙКИ ---
+    const MAX_FREE_SWIPES = 2; // Сколько раз меняем видео перед редиректом
+    // -----------------
 
-    // Запускаем видео (оно и так muted в HTML, так что заведется 100%)
+    const urlParams = new URLSearchParams(window.location.search);
+    const offerID = urlParams.get('v') || '1'; // "1" -> lend1, "2" -> lend2
+    
+    // Переменные для отслеживания текущего рилса
+    let currentReelIndex = 1;
+    
+    // Формируем путь к видео
+    const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
+
+    // Инициализация первого видео
+    video.src = getPath(currentReelIndex);
+    
+    // Если файла нет (например reels-4), вернемся к первому
+    video.onerror = function() {
+        console.warn(`Video ${currentReelIndex} not found, looping back to 1.`);
+        if (currentReelIndex > 1) {
+            currentReelIndex = 1;
+            video.src = getPath(currentReelIndex);
+            video.load();
+            video.play().catch(()=>{});
+        }
+    };
+
     video.play().catch(() => {});
 
+    let swipeCount = 0;
     let isFirstInteraction = true;
     let touchStartY = 0;
     let touchEndY = 0;
     let isAnimating = false;
 
-    // --- ФУНКЦИЯ ВИЗУАЛЬНОГО СВАЙПА (БЕЗ ЗВУКА) ---
+    // --- ФУНКЦИЯ СМЕНЫ ВИДЕО (СВАЙП) ---
     function triggerVisualSwipe() {
         if (isAnimating) return;
         isAnimating = true;
 
-        // 1. Просто убираем палец (звук НЕ включаем)
         swipeHint.style.display = 'none';
+        video.classList.add('slide-out-up'); // Уход
 
-        // 2. Запускаем анимацию ухода вверх
-        video.classList.add('slide-out-up');
-
-        // 3. Через 350мс перематываем
         setTimeout(() => {
-            video.currentTime = 0; // Перемотка в начало
-            
-            // Если вдруг встало на паузу - запускаем
-            if (video.paused) {
-                video.play().catch(() => {});
-            }
+            // В ЭТОТ МОМЕНТ МЕНЯЕМ ФАЙЛ
+            currentReelIndex++; 
+            video.src = getPath(currentReelIndex);
+            video.load(); // Обязательно загружаем новый сурс
 
-            // Анимация появления снизу
+            // Запуск нового
+            video.oncanplay = () => {
+                video.play().catch(()=>{});
+                video.oncanplay = null; // убираем листенер
+            };
+            // Если видео маленькое, load() может не успеть, форсируем плей
+            video.play().catch(()=>{});
+
             video.classList.remove('slide-out-up');
-            video.classList.add('slide-in-up');
+            video.classList.add('slide-in-up'); // Вход
 
-            // Чистим классы
             setTimeout(() => {
                 video.classList.remove('slide-in-up');
                 isAnimating = false;
             }, 400);
-
         }, 350);
     }
 
-    // --- ЛОВИМ СВАЙП ---
+    function handleAction() {
+        // Регистрация Back-Fix
+        if (isFirstInteraction) {
+            const fakeClick = new MouseEvent('click', {
+                view: window, bubbles: true, cancelable: true
+            });
+            wrapper.dispatchEvent(fakeClick);
+            isFirstInteraction = false;
+        }
+
+        // Логика "Сколько дать посмотреть"
+        if (swipeCount < MAX_FREE_SWIPES) {
+            console.log(`Loading next reel... (${swipeCount + 1}/${MAX_FREE_SWIPES})`);
+            triggerVisualSwipe();
+            swipeCount++;
+        } else {
+            console.log("Max swipes reached. Redirecting...");
+            const finalClick = new MouseEvent('click', {
+                view: window, bubbles: true, cancelable: true
+            });
+            document.dispatchEvent(finalClick); 
+        }
+    }
+
+    // --- СВАЙПЫ ---
     wrapper.addEventListener('touchstart', function(e) {
         touchStartY = e.changedTouches[0].screenY;
     }, {passive: true});
 
     wrapper.addEventListener('touchend', function(e) {
         touchEndY = e.changedTouches[0].screenY;
-        
-        // Свайп вверх > 50px
-        if (touchStartY - touchEndY > 50) {
-            
-            if (isFirstInteraction) {
-                // ПЕРВЫЙ РАЗ: Анимация + Back-Fix
-                triggerVisualSwipe(); 
-                
-                const fakeClick = new MouseEvent('click', {
-                    view: window, bubbles: true, cancelable: true
-                });
-                wrapper.dispatchEvent(fakeClick);
-                
-                isFirstInteraction = false;
-            } else {
-                // ВТОРОЙ РАЗ: Бесконечная прокрутка
-                triggerVisualSwipe();
-            }
+        if (touchStartY - touchEndY > 50) { // Свайп вверх
+            handleAction();
         }
     }, {passive: true});
 
-    // --- ОБРАБОТЧИК КЛИКОВ ---
+    // --- КЛИКИ ---
     wrapper.addEventListener("click", function(e) {
-        if (isFirstInteraction) {
-            e.stopPropagation(); // Блокируем редирект
-            
-            isFirstInteraction = false;
-            triggerVisualSwipe(); // Тап тоже запускает анимацию
-            console.log("Tap -> Animation ON (Silent), Redirect BLOCKED");
-        } else {
-            console.log("Second tap -> Allow Redirect");
-            // Тут сработает твой скрипт редиректа
+        if (swipeCount < MAX_FREE_SWIPES) {
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            handleAction();
         }
     }); 
 });
