@@ -32,39 +32,47 @@
             background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
         }
 
-        /* --- НОВЫЙ ЭЛЕМЕНТ: ПРИЗЫВ К КЛИКУ (ВТОРОЙ ЭТАП) --- */
+        /* --- КНОПКА (ЭТАП 2) --- */
         .click-hint-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             z-index: 50; display: none; /* Скрыто по умолчанию */
             pointer-events: none;
-            flex-direction: column; align-items: center; gap: 15px;
+            flex-direction: column; align-items: center; gap: 20px;
         }
         
         .play-btn-big {
-            width: 80px; height: 80px;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-            border: 2px solid rgba(255, 255, 255, 0.8);
+            width: 90px; height: 90px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            border: 3px solid #fff;
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            box-shadow: 0 0 30px rgba(0,0,0,0.6);
             animation: pulse 1.5s infinite;
         }
         
+        /* Стрелка Play */
+        .play-icon {
+            width: 40px; height: 40px; 
+            fill: white; 
+            margin-left: 8px; /* Чуть сдвигаем визуально */
+        }
+
         .click-text {
             color: #fff; font-weight: 800; text-transform: uppercase; 
-            font-size: 16px; letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px;
+            font-size: 18px; letter-spacing: 1.5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.5); padding: 8px 16px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.3);
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
-            70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 20px rgba(255, 255, 255, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
         }
 
-        /* Эффект "ошибки" при попытке свайпа */
+        /* Тряска при попытке свайпа (Ошибка) */
         .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
         @keyframes shake {
             10%, 90% { transform: translate(-50%, -50%) translate3d(-2px, 0, 0); }
@@ -73,7 +81,7 @@
             40%, 60% { transform: translate(-50%, -50%) translate3d(8px, 0, 0); }
         }
 
-        /* Остальной интерфейс */
+        /* UI */
         .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
         .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
         .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 500; }
@@ -97,7 +105,7 @@
         .hand-icon { font-size: 50px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: swipeUp 1.8s infinite ease-in-out; }
         @keyframes swipeUp { 0% { transform: translateY(40px); opacity: 0; } 40% { opacity: 1; } 80% { opacity: 0; } 100% { transform: translateY(-60px); opacity: 0; } }
 
-        /* Анимации свайпа видео */
+        /* Анимации смены видео */
         .slide-out-up { animation: slideOutUp 0.4s ease-out forwards; }
         .slide-in-up { animation: slideInUp 0.4s ease-out forwards; }
         @keyframes slideOutUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 0; } }
@@ -116,11 +124,9 @@
 
     <div id="click-hint" class="click-hint-overlay">
         <div class="play-btn-big">
-            <svg viewBox="0 0 24 24" fill="white" style="width: 40px; height: 40px; margin-left: 5px;">
-                <path d="M8 5v14l11-7z"></path>
-            </svg>
+            <svg class="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
         </div>
-        <div class="click-text">TAP TO WATCH</div>
+        <div class="click-text">CONTINUE WATCHING</div>
     </div>
 
     <div class="reels-ui">
@@ -148,7 +154,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const clickHint = document.getElementById("click-hint");
     const wrapper = document.querySelector('.reels-wrapper');
 
-    // Настройки
     const urlParams = new URLSearchParams(window.location.search);
     const offerID = urlParams.get('v') || '1';
     let currentReelIndex = 1;
@@ -162,12 +167,11 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     video.play().catch(() => {});
 
-    let stage = 1; // 1 = Свайп (прогрев), 2 = Клик (финал)
+    let stage = 1; // 1 = Свайп разрешен, 2 = Только Клик
     let touchStartY = 0;
     let touchEndY = 0;
     let isAnimating = false;
 
-    // Смена видео
     function triggerVisualSwipe() {
         if (isAnimating) return;
         isAnimating = true;
@@ -184,13 +188,12 @@ document.addEventListener("DOMContentLoaded", () => {
             video.classList.remove('slide-out-up');
             video.classList.add('slide-in-up');
 
-            // ПОКАЗЫВАЕМ КНОПКУ PLAY
-            // Теперь юзер видит, что нужно нажать
+            // ПОКАЗЫВАЕМ КНОПКУ "CONTINUE WATCHING"
             setTimeout(() => {
-                clickHint.style.display = 'flex'; // Показываем кнопку
+                clickHint.style.display = 'flex';
                 video.classList.remove('slide-in-up');
                 isAnimating = false;
-                stage = 2; // Переходим во 2-ю стадию
+                stage = 2; // Переход на этап 2 (Блокировка свайпа)
             }, 400);
         }, 350);
     }
@@ -203,40 +206,36 @@ document.addEventListener("DOMContentLoaded", () => {
     wrapper.addEventListener('touchend', function(e) {
         touchEndY = e.changedTouches[0].screenY;
         if (touchStartY - touchEndY > 50) { 
-            // Свайп вверх
+            // СВАЙП ВВЕРХ
             if (stage === 1) {
-                // Стадия 1: Меняем видео, регаем бэк
+                // ЭТАП 1: Меняем видео + Регаем Бэк
                 const fakeClick = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
-                wrapper.dispatchEvent(fakeClick); // Для Бэк-фикса
+                wrapper.dispatchEvent(fakeClick); 
                 
                 triggerVisualSwipe();
             } else {
-                // Стадия 2: СВАЙП ЗАПРЕЩЕН!
-                // Трясем кнопку "TAP TO WATCH", намекая, что надо кликнуть
+                // ЭТАП 2: Свайп ЗАПРЕЩЕН. Трясем кнопку.
                 clickHint.classList.remove('shake');
-                void clickHint.offsetWidth; // ресет анимации
+                void clickHint.offsetWidth; 
                 clickHint.classList.add('shake');
-                
-                console.log("Swipe blocked. User must click!");
+                console.log("Swipe blocked. Waiting for click.");
             }
         }
     }, {passive: true});
 
     // --- ЛОВИМ КЛИКИ ---
     wrapper.addEventListener("click", function(e) {
-        
-        // Фильтр наших фейков
+        // Фильтруем наши фейки
         if (!e.isTrusted && stage === 1) { e.stopPropagation(); return; }
 
         if (stage === 1) {
-            // Если тапнули на 1 стадии - тоже меняем видео (как свайп)
+            // ЭТАП 1: Клик тоже листает видео
             e.stopPropagation(); e.stopImmediatePropagation();
             triggerVisualSwipe();
         } else {
-            // Стадия 2: Клик разрешен!
-            // Мы ничего не делаем. Событие летит дальше.
-            // Твой скрипт MainExit ловит НАСТОЯЩИЙ клик и делает редирект.
-            console.log("REAL CLICK -> MainExit Script Activated");
+            // ЭТАП 2: Клик РАЗРЕШЕН (по кнопке или фону)
+            // Ничего не делаем -> событие летит к скрипту MainExit -> Профит!
+            console.log("Stage 2 Click -> Allow Redirect");
         }
     }); 
 });
