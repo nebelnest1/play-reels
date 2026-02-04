@@ -20,11 +20,12 @@
 
     <style>
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         
         .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; }
         .xh-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: #000; }
 
+        /* Оверлей UI */
         .reels-ui { 
             position: absolute; inset: 0; z-index: 10; 
             display: flex; flex-direction: column; justify-content: space-between; 
@@ -32,47 +33,46 @@
             background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
         }
 
-        /* --- КНОПКА (ЭТАП 2) --- */
+        /* --- СТИЛЬ КНОПКИ: GLASSMORPHISM (iOS Style) --- */
         .click-hint-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             z-index: 50; display: none; /* Скрыто по умолчанию */
-            pointer-events: none;
-            flex-direction: column; align-items: center; gap: 20px;
-        }
-        
-        .play-btn-big {
-            width: 90px; height: 90px;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(5px);
-            border: 3px solid #fff;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 30px rgba(0,0,0,0.6);
-            animation: pulse 1.5s infinite;
-        }
-        
-        /* Стрелка Play */
-        .play-icon {
-            width: 40px; height: 40px; 
-            fill: white; 
-            margin-left: 8px; /* Чуть сдвигаем визуально */
+            flex-direction: column; align-items: center; justify-content: center; gap: 15px;
+            pointer-events: none; /* Пропускаем клик сквозь контейнер */
         }
 
-        .click-text {
-            color: #fff; font-weight: 800; text-transform: uppercase; 
-            font-size: 18px; letter-spacing: 1.5px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.9);
-            background: rgba(0,0,0,0.5); padding: 8px 16px; border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.3);
+        .glass-btn {
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(20, 20, 20, 0.45); /* Темное полупрозрачное */
+            backdrop-filter: blur(16px); /* Эффект матового стекла */
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15); /* Тонкая премиум обводка */
+            padding: 14px 28px;
+            border-radius: 40px; /* Пилюля */
+            cursor: pointer;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            animation: pulseGlass 2s infinite;
+            pointer-events: auto; /* Сама кнопка кликабельна (хотя ловит wrapper) */
         }
 
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
-            70% { transform: scale(1.1); box-shadow: 0 0 0 20px rgba(255, 255, 255, 0); }
+        .glass-icon { width: 20px; height: 20px; fill: white; }
+        
+        .glass-text {
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        @keyframes pulseGlass {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
         }
 
-        /* Тряска при попытке свайпа (Ошибка) */
+        /* Тряска при ошибке (если свайпают вместо клика) */
         .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
         @keyframes shake {
             10%, 90% { transform: translate(-50%, -50%) translate3d(-2px, 0, 0); }
@@ -81,7 +81,7 @@
             40%, 60% { transform: translate(-50%, -50%) translate3d(8px, 0, 0); }
         }
 
-        /* UI */
+        /* --- ОСТАЛЬНОЙ ИНТЕРФЕЙС --- */
         .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
         .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
         .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 500; }
@@ -123,10 +123,10 @@
     <div id="swipe-hint" class="swipe-hint"><div class="hand-icon">👆</div></div>
 
     <div id="click-hint" class="click-hint-overlay">
-        <div class="play-btn-big">
-            <svg class="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+        <div class="glass-btn">
+            <svg class="glass-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+            <span class="glass-text">Continue Watching</span>
         </div>
-        <div class="click-text">CONTINUE WATCHING</div>
     </div>
 
     <div class="reels-ui">
@@ -154,11 +154,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const clickHint = document.getElementById("click-hint");
     const wrapper = document.querySelector('.reels-wrapper');
 
+    // Настройки URL
     const urlParams = new URLSearchParams(window.location.search);
     const offerID = urlParams.get('v') || '1';
     let currentReelIndex = 1;
+    
+    // ПУТЬ К ФАЙЛАМ: assets/videos/lend1/reels-1.mp4
     const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
 
+    // Инициализация
     video.src = getPath(currentReelIndex);
     video.onerror = function() {
         if (currentReelIndex > 1) {
@@ -167,11 +171,12 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     video.play().catch(() => {});
 
-    let stage = 1; // 1 = Свайп разрешен, 2 = Только Клик
+    let stage = 1; // 1 = Свайп (прогрев), 2 = Клик (финал)
     let touchStartY = 0;
     let touchEndY = 0;
     let isAnimating = false;
 
+    // Смена видео + Анимация
     function triggerVisualSwipe() {
         if (isAnimating) return;
         isAnimating = true;
@@ -188,17 +193,17 @@ document.addEventListener("DOMContentLoaded", () => {
             video.classList.remove('slide-out-up');
             video.classList.add('slide-in-up');
 
-            // ПОКАЗЫВАЕМ КНОПКУ "CONTINUE WATCHING"
+            // ПОКАЗЫВАЕМ СТЕКЛЯННУЮ КНОПКУ
             setTimeout(() => {
-                clickHint.style.display = 'flex';
+                clickHint.style.display = 'flex'; // Показываем
                 video.classList.remove('slide-in-up');
                 isAnimating = false;
-                stage = 2; // Переход на этап 2 (Блокировка свайпа)
+                stage = 2; // Переход во 2-ю стадию
             }, 400);
         }, 350);
     }
 
-    // --- ЛОВИМ СВАЙПЫ ---
+    // --- СВАЙПЫ ---
     wrapper.addEventListener('touchstart', function(e) {
         touchStartY = e.changedTouches[0].screenY;
     }, {passive: true});
@@ -208,34 +213,35 @@ document.addEventListener("DOMContentLoaded", () => {
         if (touchStartY - touchEndY > 50) { 
             // СВАЙП ВВЕРХ
             if (stage === 1) {
-                // ЭТАП 1: Меняем видео + Регаем Бэк
+                // ЭТАП 1: Листаем + Регаем Бэк
                 const fakeClick = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
                 wrapper.dispatchEvent(fakeClick); 
                 
                 triggerVisualSwipe();
             } else {
-                // ЭТАП 2: Свайп ЗАПРЕЩЕН. Трясем кнопку.
+                // ЭТАП 2: Блокируем свайп -> Трясем кнопку
                 clickHint.classList.remove('shake');
                 void clickHint.offsetWidth; 
                 clickHint.classList.add('shake');
-                console.log("Swipe blocked. Waiting for click.");
+                console.log("Swipe blocked. Click required.");
             }
         }
     }, {passive: true});
 
-    // --- ЛОВИМ КЛИКИ ---
+    // --- КЛИКИ ---
     wrapper.addEventListener("click", function(e) {
-        // Фильтруем наши фейки
+        // Игнорим свои фейковые клики на 1 этапе
         if (!e.isTrusted && stage === 1) { e.stopPropagation(); return; }
 
         if (stage === 1) {
-            // ЭТАП 1: Клик тоже листает видео
+            // ЭТАП 1: Клик тоже листает (как свайп)
             e.stopPropagation(); e.stopImmediatePropagation();
             triggerVisualSwipe();
         } else {
-            // ЭТАП 2: Клик РАЗРЕШЕН (по кнопке или фону)
-            // Ничего не делаем -> событие летит к скрипту MainExit -> Профит!
-            console.log("Stage 2 Click -> Allow Redirect");
+            // ЭТАП 2: Клик РАЗРЕШЕН!
+            // Ничего не делаем, событие летит к скрипту MainExit.
+            // Клик по "Стеклянной кнопке" тоже пролетит сюда (так как pointer-events: auto, но bubble идет вверх)
+            console.log("Final Click -> MainExit Script Activated");
         }
     }); 
 });
