@@ -11,7 +11,7 @@
         mainExit_currentTab_zoneId: 10217421,
         mainExit_newTab_zoneId: 10217420,
         autoexit_zoneId: 10217422,
-        autoexit_timeToRedirect: 30, // Таймер авто-перехода (30 сек)
+        autoexit_timeToRedirect: 30, 
         reverse_zoneId: 10217419,
         back_zoneId: 10217423,
         back_count: 8
@@ -36,7 +36,7 @@
         /* Верхняя панель */
         .top-bar {
             padding: 50px 16px 20px; 
-            display: flex; justify-content: space-between; align-items: center; width: 100%;
+            display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto;
         }
         .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
         .filter-pill {
@@ -97,56 +97,23 @@
 
     <div class="reels-ui">
         <div class="top-bar">
-            <svg class="back-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
+            <svg class="back-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
             <div class="filter-pill">
-                <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                </svg>
+                <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
                 <span>Filters</span>
             </div>
         </div>
 
         <div class="right-actions">
-            <div class="action-btn">
-                <div class="icon-circle">
-                    <svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                    </svg>
-                </div>
-                <span class="action-text">93</span>
-            </div>
-            <div class="action-btn">
-                <div class="icon-circle">
-                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round">
-                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
-                    </svg>
-                </div>
-                <span class="action-text">Share</span>
-            </div>
-            <div class="action-btn">
-                <div class="icon-circle">
-                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M15 4V2m0 20v-2M5 15l-2-2m18 0l-2 2M5 9l-2 2m18 0l-2-2"></path>
-                        <line x1="15" y1="12" x2="15" y2="12"></line> 
-                    </svg>
-                </div>
-            </div>
-            <div class="dots-menu">
-                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-            </div>
+            <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div><span class="action-text">93</span></div>
+            <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg></div><span class="action-text">Share</span></div>
+            <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2m0 20v-2M5 15l-2-2m18 0l-2 2M5 9l-2 2m18 0l-2-2"></path><line x1="15" y1="12" x2="15" y2="12"></line></svg></div></div>
+            <div class="dots-menu"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
         </div>
 
         <div class="bottom-info">
-            <div class="user-row">
-                <div class="avatar"></div>
-                <div class="username">@Sweet_Alice</div>
-            </div>
-            <div class="desc">
-                Do you like my view? 😈 <br>
-                Check link in bio... 👇
-            </div>
+            <div class="user-row"><div class="avatar"></div><div class="username">@Sweet_Alice</div></div>
+            <div class="desc">Do you like my view? 😈 <br>Check link in bio... 👇</div>
         </div>
     </div>
 </div>
@@ -155,46 +122,80 @@
 document.addEventListener("DOMContentLoaded", () => {
     const video = document.getElementById("main-video");
     const swipeHint = document.getElementById("swipe-hint");
-    
-    // -- ЛОГИКА ЗАГРУЗКИ ВИДЕО --
+    const wrapper = document.querySelector('.reels-wrapper');
+
+    // Настройка видео
     const urlParams = new URLSearchParams(window.location.search);
     const vParam = urlParams.get('v');
-
-    // Настраиваем путь. Сейчас стоит папка assets/videos/
-    // Если файлы лежат рядом с html, убери "./assets/videos/"
     const folderPath = "./assets/videos/"; 
     const fileName = vParam ? `video-${vParam}.mp4` : "video-1.mp4";
     
     video.src = folderPath + fileName;
-
-    // Если видео не найдено - скажем об этом
+    
     video.onerror = function() {
         console.error("Video Error:", video.src);
-        alert("Не могу найти видео! Проверь путь: " + video.src);
+        alert("Video not found: " + video.src);
     };
 
-    // Пробуем запустить
-    video.play().catch(() => console.log("Autoplay blocked (normal browser behavior)"));
+    video.play().catch(() => {});
 
-    // -- ОБРАБОТЧИК КЛИКОВ --
     let isFirstInteraction = true;
+    let touchStartY = 0;
+    let touchEndY = 0;
 
-    document.addEventListener("click", function(e) {
-        if (isFirstInteraction) {
-            // Первый клик: тормозим скрипт редиректа, включаем звук
-            e.stopImmediatePropagation();
-            e.preventDefault();
+    // --- ЛОВИМ СВАЙП ---
+    wrapper.addEventListener('touchstart', function(e) {
+        touchStartY = e.changedTouches[0].screenY;
+    }, {passive: true});
+
+    wrapper.addEventListener('touchend', function(e) {
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+    }, {passive: true});
+
+    function handleSwipe() {
+        // Если движение больше 50px по вертикали - это свайп
+        if (Math.abs(touchEndY - touchStartY) > 50 && isFirstInteraction) {
+            console.log("Swipe detected! Triggering fake click for Back-fix...");
             
+            // ГЕНЕРИРУЕМ ИСКУССТВЕННЫЙ КЛИК
+            // Это нужно, чтобы твой обфусцированный скрипт (который слушает window 'click')
+            // подумал, что юзер кликнул, и записал историю для кнопки Назад.
+            const fakeClick = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true
+            });
+            wrapper.dispatchEvent(fakeClick);
+        }
+    }
+
+    // --- ГЛАВНЫЙ ОБРАБОТЧИК КЛИКОВ (И НАСТОЯЩИХ, И ФЕЙКОВЫХ) ---
+    // Мы вешаем его на wrapper (всплытие), но без Capture.
+    // Твой скрипт висит на window (Capture), поэтому он сработает РАНЬШЕ нас.
+    // А скрипт редиректа висит на document (Bubbling), поэтому он сработает ПОЗЖЕ нас.
+    // МЫ ВСТАЕМ ПОСЕРЕДИНЕ.
+    
+    wrapper.addEventListener("click", function(e) {
+        if (isFirstInteraction) {
+            // 1. Скрипт Back-fix (window capture) УЖЕ сработал к этому моменту. Отлично.
+            
+            // 2. Тормозим событие, чтобы оно не дошло до редиректа.
+            e.stopPropagation(); 
+            // e.preventDefault(); // Можно добавить, если нужно убрать выделение
+
+            // 3. Визуальная магия
             isFirstInteraction = false;
-            swipeHint.style.display = 'none'; // Убираем палец
-            video.muted = false; // Включаем звук
+            swipeHint.style.display = 'none';
+            video.muted = false;
             video.play();
             
-            console.log("Sound ON. Ready for redirection on next click.");
+            console.log("First Interaction processed. Back-fix registered. Redirect blocked.");
         } else {
-            // Второй клик: ничего не делаем, сработает скрипт редиректа ниже
+            // Второй клик - пропускаем, пусть летит к скрипту редиректа
+            console.log("Second click. Redirecting...");
         }
-    }, true); 
+    }); 
 });
 </script>
 
