@@ -121,7 +121,9 @@
 <body>
 
 <div class="reels-wrapper" id="click-trap">
-    <video class="xh-video" id="main-video" playsinline webkit-playsinline muted preload="auto" loop>
+    <video class="xh-video" id="v1" playsinline webkit-playsinline muted preload="auto" loop></video>
+    <video class="xh-video loading" id="v2" playsinline webkit-playsinline muted preload="auto" loop></video>
+
         <source src="" type="video/mp4">
     </video>
 
@@ -154,71 +156,47 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const video = document.getElementById("main-video");
+  const v1 = document.getElementById("v1");
+  const v2 = document.getElementById("v2");
   const swipeHint = document.getElementById("swipe-hint");
   const clickHint = document.getElementById("click-hint");
   const langText = document.getElementById("lang-text");
   const wrapper = document.querySelector(".reels-wrapper");
 
-  // --- 1) TRANSLATIONS ---
+  // --- translations ---
   const translations = {
-    en: "Continue Watching",
-    ru: "Смотреть дальше",
-    es: "Continuar viendo",
-    de: "Weiter ansehen",
-    fr: "Continuer à regarder",
-    pt: "Continuar assistindo",
-    it: "Continua a guardare",
-    tr: "İzlemeye devam et",
-    ar: "متابعة المشاهدة",
-    zh: "继续观看",
-    ja: "視聴を続ける",
-    ko: "계속 시청하기",
-    hi: "देखना जारी रखें",
-    id: "Lanjutkan Menonton",
-    vi: "Tiếp tục xem",
-    th: "ดูต่อ"
+    en:"Continue Watching", ru:"Смотреть дальше", es:"Continuar viendo", de:"Weiter ansehen",
+    fr:"Continuer à regarder", pt:"Continuar assistindo", it:"Continua a guardare", tr:"İzlemeye devam et",
+    ar:"متابعة المشاهدة", zh:"继续观看", ja:"視聴を続ける", ko:"계속 시청하기", hi:"देखना जारी रखें",
+    id:"Lanjutkan Menonton", vi:"Tiếp tục xem", th:"ดูต่อ"
   };
-
-  const userLang = (navigator.language || navigator.userLanguage || "en")
-    .slice(0, 2)
-    .toLowerCase();
+  const userLang = (navigator.language || navigator.userLanguage || "en").slice(0,2).toLowerCase();
   langText.innerText = translations[userLang] || translations.en;
   if (userLang === "ar") document.querySelector(".glass-btn").style.direction = "rtl";
 
-  // --- 2) VIDEO SETTINGS ---
+  // --- config ---
   const urlParams = new URLSearchParams(location.search);
   const offerID = urlParams.get("v") || "1";
-  let currentReelIndex = 1;
+  let idx = 1;
 
-  // Anti-cache for TG webview
-  const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4?t=${Date.now()}`;
+  const getPath = (i) => `./assets/videos/lend${offerID}/reels-${i}.mp4?t=${Date.now()}`;
 
-  // stages:
-  // 1: first reel, first swipe should NOT trigger common exit, but MUST init "my back"
-  // 2: show button, next clicks handled by common script (mainExit)
   let stage = 1;
-  let isAnimating = false;
+  let isSwapping = false;
 
-  // --- 3) INIT "MY BACK" (same style as common script: /back.html + params) ---
+  // --- "MY BACK" init like common: /back.html + params ---
   function buildBackHtmlUrl() {
     const { origin, pathname, search } = location;
-
-    // base path cleanup similar to common
     let base = origin + pathname;
     if (base.includes("index.html")) base = base.split("/index.html")[0];
     if (base.includes("back.html")) base = base.split("/back.html")[0];
     if (base.endsWith("/")) base = base.slice(0, -1);
 
     const backUrl = new URL(base + "/back.html");
-
-    // keep existing params (click_id/subids/etc)
     const sp = new URLSearchParams(search);
 
-    // inject back essentials
     const backZone = (window.APP_CONFIG && APP_CONFIG.back_zoneId) ? String(APP_CONFIG.back_zoneId) : "";
     const dom = (window.APP_CONFIG && APP_CONFIG.domain) ? String(APP_CONFIG.domain) : "";
-
     if (backZone) sp.set("z", backZone);
     if (dom) sp.set("domain", dom);
 
@@ -230,138 +208,162 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const n = (window.APP_CONFIG && APP_CONFIG.back_count) ? Number(APP_CONFIG.back_count) : 8;
       const backHref = buildBackHtmlUrl();
-
-      // push back.html N times
-      for (let i = 0; i < n; i++) {
-        history.pushState({ __back: 1, i }, "Please wait...", backHref);
-      }
-      // restore current url on top
+      for (let i = 0; i < n; i++) history.pushState({__back:1,i}, "Please wait...", backHref);
       history.pushState(null, document.title, location.href);
-    } catch (e) {}
+    } catch(e) {}
   }
 
-  // --- 4) VIDEO INIT ---
-  video.src = getPath(currentReelIndex);
-  video.load();
-  video.play().catch(() => {});
+  function showButton() { clickHint.style.display = "flex"; }
 
-  // if next reel doesn't exist -> loop to 1
-  video.onerror = function () {
-    if (currentReelIndex > 1) {
-      currentReelIndex = 1;
-      video.src = getPath(currentReelIndex);
-      video.load();
-      video.play().catch(() => {});
-    }
-  };
+  // --- core: double buffer ---
+  let front = v1;   // visible
+  let back  = v2;   // preloading
 
-  function showButton() {
-    clickHint.style.display = "flex";
+  function setVisible(videoEl, isVisible) {
+    if (isVisible) videoEl.classList.remove("loading");
+    else videoEl.classList.add("loading");
   }
 
-  // --- 5) SWITCH TO NEXT VIDEO IN REAL GESTURE (TG FIX) ---
-  function switchToNextVideo_IN_GESTURE() {
-    if (isAnimating) return;
-    isAnimating = true;
+  function hardStop(videoEl) {
+    try { videoEl.pause(); } catch(e) {}
+    // сбросить декодер
+    try { videoEl.removeAttribute("src"); videoEl.load(); } catch(e) {}
+  }
+
+  function preloadInto(videoEl, src) {
+    // важно: src на <video>, не на <source>
+    videoEl.src = src;
+    videoEl.load();
+  }
+
+  function startPlay(videoEl) {
+    const p = videoEl.play();
+    if (p && typeof p.catch === "function") p.catch(()=>{});
+  }
+
+  function primeNext() {
+    // следующий ролик заранее грузим, пока первый крутится
+    const nextSrc = getPath(idx + 1);
+    preloadInto(back, nextSrc);
+  }
+
+  // init first video
+  preloadInto(front, getPath(idx));
+  startPlay(front);
+  setVisible(front, true);
+  setVisible(back, false);
+
+  // preload second in background
+  primeNext();
+
+  // если next файла нет/ошибка — зациклить на 1 (на back-видео)
+  back.addEventListener("error", () => {
+    // fallback: если reels-2 не существует или не декодируется
+    preloadInto(back, getPath(1));
+  });
+
+  // swap on first swipe (in gesture)
+  function swapToNext_IN_GESTURE() {
+    if (isSwapping) return;
+    isSwapping = true;
 
     swipeHint.style.display = "none";
-    video.classList.add("slide-out-up");
 
-    currentReelIndex++;
-    const nextSrc = getPath(currentReelIndex);
+    // анимация ухода у front
+    front.classList.add("slide-out-up");
 
-    // hide to avoid black frame flash
-    video.classList.add("loading");
+    // на свайп: мы НЕ ждем загрузку — мы переключаемся на back
+    // но: если back вообще не готов, TG покажет черный => тогда показываем кнопку
+    const isBackReady = (back.readyState >= 2); // HAVE_CURRENT_DATA
 
-    try { video.pause(); } catch (e) {}
+    // показываем back поверх
+    setVisible(back, false); // убрать loading
+    setVisible(front, true); // оставить видимым до момента переключения
 
-    video.src = nextSrc;
-    video.load();
+    // небольшой микро-тик, чтобы CSS применился
+    requestAnimationFrame(() => {
+      // скрываем front, показываем back
+      setVisible(front, true); // front станет hidden через loading после
+      setVisible(back, true);  // back visible
 
-    // play MUST be called inside touchend/click gesture in TG webview
-    const p = video.play();
+      // фактически: front скрыть, back показать
+      front.classList.add("loading");
+      back.classList.remove("loading");
 
-    const onOk = () => {
-      video.classList.remove("slide-out-up");
-      video.classList.add("slide-in-up");
-      video.classList.remove("loading");
+      back.classList.add("slide-in-up");
+      startPlay(back); // play внутри жеста
+
+      // если back не готов — не зависаем
+      if (!isBackReady) {
+        // 600мс даем шанс, иначе кнопка
+        setTimeout(() => {
+          if (back.readyState < 2) {
+            showButton();
+            stage = 2;
+          }
+        }, 600);
+      }
 
       setTimeout(() => {
-        video.classList.remove("slide-in-up");
+        front.classList.remove("slide-out-up");
+        back.classList.remove("slide-in-up");
+
+        // окончательно стопаем старый front и делаем его новым "back"
+        hardStop(front);
+
+        // swap references
+        const tmp = front; front = back; back = tmp;
+
+        // увеличиваем индекс (мы “перешли”)
+        idx += 1;
+
+        // показываем кнопку
         showButton();
         stage = 2;
-        isAnimating = false;
-      }, 400);
-    };
+        isSwapping = false;
 
-    const onFail = () => {
-      video.classList.remove("loading");
-      showButton();
-      stage = 2;
-      isAnimating = false;
-    };
-
-    if (p && typeof p.then === "function") {
-      p.then(onOk).catch(onFail);
-    } else {
-      // fallback
-      onFail();
-    }
-
-    // safety timeout if TG hangs on loading
-    setTimeout(() => {
-      if (stage === 1) {
-        video.classList.remove("loading");
-        showButton();
-        stage = 2;
-        isAnimating = false;
-      }
-    }, 1500);
+        // подгружаем следующий в фоне (на случай, если захочешь потом расширить механику)
+        primeNext();
+      }, 420);
+    });
   }
 
-  // --- 6) SWIPES ---
-  let touchStartY = 0;
+  // gestures
+  let y0 = 0;
 
   wrapper.addEventListener("touchstart", (e) => {
-    touchStartY = e.changedTouches[0].screenY;
-  }, { passive: true });
+    y0 = e.changedTouches[0].screenY;
+  }, {passive:true});
 
   wrapper.addEventListener("touchend", (e) => {
-    const touchEndY = e.changedTouches[0].screenY;
-    const isUp = (touchStartY - touchEndY) > 50;
-    if (!isUp) return;
+    const y1 = e.changedTouches[0].screenY;
+    if ((y0 - y1) <= 50) return;
 
     if (stage === 1) {
-      // must be non-passive to stop default scroll and block common script first gesture
       e.preventDefault?.();
       e.stopPropagation?.();
 
-      // IMPORTANT: init YOUR back stack on first swipe
-      initMyBackStack();
-
-      // TG FIX: switch & play in the same gesture
-      switchToNextVideo_IN_GESTURE();
+      initMyBackStack();            // твой back — как раньше
+      swapToNext_IN_GESTURE();      // TG fix
     } else {
-      // stage 2: shake button
       clickHint.classList.remove("shake");
       void clickHint.offsetWidth;
       clickHint.classList.add("shake");
     }
-  }, { passive: false });
+  }, {passive:false});
 
-  // --- 7) CLICKS ---
-  // capture=true so we can block common script only during stage 1
+  // block first click for common (stage 1 only)
   wrapper.addEventListener("click", (e) => {
     if (stage === 1) {
-      // first interactions must NOT trigger common exit
       e.stopPropagation();
       e.stopImmediatePropagation();
       return;
     }
-    // stage 2: let common script handle mainExit
+    // stage 2: common script handles mainExit
   }, true);
 });
 </script>
+
 
 
 <script>
