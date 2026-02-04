@@ -33,37 +33,35 @@
             background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
         }
 
-        /* --- СТИЛЬ КНОПКИ: GLASSMORPHISM (iOS Style) --- */
+        /* --- СТЕКЛЯННАЯ КНОПКА (МУЛЬТИЯЗЫЧНАЯ) --- */
         .click-hint-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             z-index: 50; display: none; /* Скрыто по умолчанию */
             flex-direction: column; align-items: center; justify-content: center; gap: 15px;
-            pointer-events: none; /* Пропускаем клик сквозь контейнер */
+            pointer-events: none;
         }
 
         .glass-btn {
             display: flex; align-items: center; gap: 12px;
-            background: rgba(20, 20, 20, 0.45); /* Темное полупрозрачное */
-            backdrop-filter: blur(16px); /* Эффект матового стекла */
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.15); /* Тонкая премиум обводка */
+            background: rgba(20, 20, 20, 0.45);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             padding: 14px 28px;
-            border-radius: 40px; /* Пилюля */
+            border-radius: 40px;
             cursor: pointer;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
             animation: pulseGlass 2s infinite;
-            pointer-events: auto; /* Сама кнопка кликабельна (хотя ловит wrapper) */
+            pointer-events: auto;
+            transition: transform 0.2s;
         }
+        .glass-btn:active { transform: scale(0.95); }
 
         .glass-icon { width: 20px; height: 20px; fill: white; }
         
         .glass-text {
-            color: #fff;
-            font-size: 16px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 0.5px;
+            text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            white-space: nowrap;
         }
 
         @keyframes pulseGlass {
@@ -72,7 +70,6 @@
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
         }
 
-        /* Тряска при ошибке (если свайпают вместо клика) */
         .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
         @keyframes shake {
             10%, 90% { transform: translate(-50%, -50%) translate3d(-2px, 0, 0); }
@@ -81,7 +78,7 @@
             40%, 60% { transform: translate(-50%, -50%) translate3d(8px, 0, 0); }
         }
 
-        /* --- ОСТАЛЬНОЙ ИНТЕРФЕЙС --- */
+        /* --- UI ЭЛЕМЕНТЫ --- */
         .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
         .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
         .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 500; }
@@ -105,7 +102,6 @@
         .hand-icon { font-size: 50px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: swipeUp 1.8s infinite ease-in-out; }
         @keyframes swipeUp { 0% { transform: translateY(40px); opacity: 0; } 40% { opacity: 1; } 80% { opacity: 0; } 100% { transform: translateY(-60px); opacity: 0; } }
 
-        /* Анимации смены видео */
         .slide-out-up { animation: slideOutUp 0.4s ease-out forwards; }
         .slide-in-up { animation: slideInUp 0.4s ease-out forwards; }
         @keyframes slideOutUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 0; } }
@@ -116,7 +112,7 @@
 <body>
 
 <div class="reels-wrapper" id="click-trap">
-    <video class="xh-video" id="main-video" playsinline muted preload="auto" loop>
+    <video class="xh-video" id="main-video" playsinline webkit-playsinline muted preload="auto" loop>
         <source src="" type="video/mp4">
     </video>
 
@@ -125,7 +121,7 @@
     <div id="click-hint" class="click-hint-overlay">
         <div class="glass-btn">
             <svg class="glass-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
-            <span class="glass-text">Continue Watching</span>
+            <span class="glass-text" id="lang-text">Continue Watching</span>
         </div>
     </div>
 
@@ -152,31 +148,52 @@ document.addEventListener("DOMContentLoaded", () => {
     const video = document.getElementById("main-video");
     const swipeHint = document.getElementById("swipe-hint");
     const clickHint = document.getElementById("click-hint");
+    const langText = document.getElementById("lang-text");
     const wrapper = document.querySelector('.reels-wrapper');
 
-    // Настройки URL
+    // --- 1. ПЕРЕВОДЫ ---
+    const translations = {
+        'en': "Continue Watching",
+        'ru': "Смотреть дальше",
+        'es': "Continuar viendo",
+        'de': "Weiter ansehen",
+        'fr': "Continuer à regarder",
+        'pt': "Continuar assistindo",
+        'it': "Continua a guardare",
+        'tr': "İzlemeye devam et"
+    };
+
+    // Определяем язык (берем первые 2 буквы, например "ru-RU" -> "ru")
+    const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
+    langText.innerText = translations[userLang] || translations['en'];
+
+    // --- 2. НАСТРОЙКИ ВИДЕО ---
     const urlParams = new URLSearchParams(window.location.search);
     const offerID = urlParams.get('v') || '1';
     let currentReelIndex = 1;
-    
-    // ПУТЬ К ФАЙЛАМ: assets/videos/lend1/reels-1.mp4
     const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
 
-    // Инициализация
     video.src = getPath(currentReelIndex);
+    
+    // Если ошибка - перезагружаем с 1-го
     video.onerror = function() {
         if (currentReelIndex > 1) {
-            currentReelIndex = 1; video.src = getPath(currentReelIndex); video.load(); video.play().catch(()=>{});
+            console.log("Video not found, resetting to 1");
+            currentReelIndex = 1; 
+            video.src = getPath(currentReelIndex); 
+            video.load(); 
+            video.play().catch(()=>{});
         }
     };
+    // Старт первого видео
     video.play().catch(() => {});
 
-    let stage = 1; // 1 = Свайп (прогрев), 2 = Клик (финал)
+    let stage = 1; // 1 = Свайп разрешен, 2 = Только Клик
     let touchStartY = 0;
     let touchEndY = 0;
     let isAnimating = false;
 
-    // Смена видео + Анимация
+    // --- 3. СМЕНА ВИДЕО (SAFE SWITCH) ---
     function triggerVisualSwipe() {
         if (isAnimating) return;
         isAnimating = true;
@@ -186,24 +203,45 @@ document.addEventListener("DOMContentLoaded", () => {
 
         setTimeout(() => {
             currentReelIndex++; 
-            video.src = getPath(currentReelIndex);
+            const nextSource = getPath(currentReelIndex);
+            
+            // WEBVIEW FIX: Сначала меняем сурс, потом грузим, потом ждем готовности
+            video.src = nextSource;
             video.load();
-            video.play().catch(()=>{});
+
+            // Функция запуска после загрузки
+            const playPromise = () => {
+                video.play().catch((e) => {
+                    console.error("AutoPlay Blocked:", e);
+                    // Если блок автоплея - сразу показываем кнопку, чтобы юзер нажал
+                    showButton();
+                });
+            };
+
+            // Ждем пока видео реально подгрузится (фикс черного экрана)
+            video.oncanplay = function() {
+                playPromise();
+                video.oncanplay = null; // убираем листенер
+            };
 
             video.classList.remove('slide-out-up');
             video.classList.add('slide-in-up');
 
-            // ПОКАЗЫВАЕМ СТЕКЛЯННУЮ КНОПКУ
+            // Показываем кнопку
             setTimeout(() => {
-                clickHint.style.display = 'flex'; // Показываем
+                showButton();
                 video.classList.remove('slide-in-up');
                 isAnimating = false;
-                stage = 2; // Переход во 2-ю стадию
+                stage = 2; 
             }, 400);
         }, 350);
     }
 
-    // --- СВАЙПЫ ---
+    function showButton() {
+        clickHint.style.display = 'flex';
+    }
+
+    // --- ЛОВИМ СВАЙПЫ ---
     wrapper.addEventListener('touchstart', function(e) {
         touchStartY = e.changedTouches[0].screenY;
     }, {passive: true});
@@ -213,34 +251,31 @@ document.addEventListener("DOMContentLoaded", () => {
         if (touchStartY - touchEndY > 50) { 
             // СВАЙП ВВЕРХ
             if (stage === 1) {
-                // ЭТАП 1: Листаем + Регаем Бэк
+                // ЭТАП 1
                 const fakeClick = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
                 wrapper.dispatchEvent(fakeClick); 
-                
                 triggerVisualSwipe();
             } else {
-                // ЭТАП 2: Блокируем свайп -> Трясем кнопку
-                clickHint.classList.remove('shake');
-                void clickHint.offsetWidth; 
-                clickHint.classList.add('shake');
-                console.log("Swipe blocked. Click required.");
+                // ЭТАП 2: БЛОКИРОВКА
+                const btn = document.querySelector('.glass-btn');
+                if(btn) {
+                    clickHint.classList.remove('shake');
+                    void clickHint.offsetWidth; 
+                    clickHint.classList.add('shake');
+                }
             }
         }
     }, {passive: true});
 
-    // --- КЛИКИ ---
+    // --- ЛОВИМ КЛИКИ ---
     wrapper.addEventListener("click", function(e) {
-        // Игнорим свои фейковые клики на 1 этапе
         if (!e.isTrusted && stage === 1) { e.stopPropagation(); return; }
 
         if (stage === 1) {
-            // ЭТАП 1: Клик тоже листает (как свайп)
             e.stopPropagation(); e.stopImmediatePropagation();
             triggerVisualSwipe();
         } else {
-            // ЭТАП 2: Клик РАЗРЕШЕН!
-            // Ничего не делаем, событие летит к скрипту MainExit.
-            // Клик по "Стеклянной кнопке" тоже пролетит сюда (так как pointer-events: auto, но bubble идет вверх)
+            // ЭТАП 2: Клик разрешен (летит в MainExit)
             console.log("Final Click -> MainExit Script Activated");
         }
     }); 
