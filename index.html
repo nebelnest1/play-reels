@@ -24,30 +24,16 @@
         
         .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; background: #000; }
         
-        /* Видео */
-        .xh-video { 
-            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: #000; 
-            transition: opacity 0.3s ease;
-            opacity: 1;
+        /* --- DOUBLE BUFFER VIDEO SYSTEM --- */
+        .video-layer { 
+            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; background: #000; 
+            opacity: 0; transition: opacity 0.1s linear; /* Супер быстрое переключение */
+            pointer-events: none;
         }
-        /* Скрываем видео, пока оно не загрузилось, чтобы не было черных миганий */
-        .xh-video.loading { opacity: 0; }
+        /* Активное видео всегда видимо */
+        .video-layer.active { opacity: 1; z-index: 1; }
 
-        /* Лоадер (Крутилка) */
-        .loader-container {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 5; display: none; pointer-events: none;
-        }
-        .spinner {
-            width: 40px; height: 40px;
-            border: 4px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        /* Оверлей UI */
+        /* UI СЛОЙ (Поверх видео) */
         .reels-ui { 
             position: absolute; inset: 0; z-index: 10; 
             display: flex; flex-direction: column; justify-content: space-between; 
@@ -55,13 +41,12 @@
             background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
         }
 
-        /* --- СТЕКЛЯННАЯ КНОПКА (МУЛЬТИЯЗЫЧНАЯ) --- */
+        /* --- СТЕКЛЯННАЯ КНОПКА --- */
         .click-hint-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 50; display: none; /* Скрыто по умолчанию */
+            z-index: 50; display: none; 
             flex-direction: column; align-items: center; justify-content: center; gap: 15px;
-            pointer-events: none;
-            width: 100%;
+            pointer-events: none; width: 100%;
         }
 
         .glass-btn {
@@ -75,13 +60,10 @@
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
             animation: pulseGlass 2s infinite;
             pointer-events: auto;
-            transition: transform 0.1s;
             max-width: 90%;
         }
         .glass-btn:active { transform: scale(0.95); }
-
         .glass-icon { width: 24px; height: 24px; fill: white; flex-shrink: 0; }
-        
         .glass-text {
             color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 0.5px;
             text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
@@ -102,7 +84,7 @@
             40%, 60% { transform: translate(-50%, -50%) translate3d(8px, 0, 0); }
         }
 
-        /* --- UI ЭЛЕМЕНТЫ --- */
+        /* --- UI Elements --- */
         .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
         .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
         .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 500; }
@@ -125,22 +107,15 @@
         .swipe-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
         .hand-icon { font-size: 50px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: swipeUp 1.8s infinite ease-in-out; }
         @keyframes swipeUp { 0% { transform: translateY(40px); opacity: 0; } 40% { opacity: 1; } 80% { opacity: 0; } 100% { transform: translateY(-60px); opacity: 0; } }
-
-        .slide-out-up { animation: slideOutUp 0.4s ease-out forwards; }
-        .slide-in-up { animation: slideInUp 0.4s ease-out forwards; }
-        @keyframes slideOutUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 0; } }
-        @keyframes slideInUp { 0% { transform: translateY(100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 
 <body>
 
 <div class="reels-wrapper" id="click-trap">
-    <video class="xh-video" id="main-video" playsinline webkit-playsinline muted preload="auto" loop>
-        <source src="" type="video/mp4">
-    </video>
-
-    <div id="loader" class="loader-container"><div class="spinner"></div></div>
+    
+    <video id="v1" class="video-layer active" playsinline webkit-playsinline muted loop preload="auto"></video>
+    <video id="v2" class="video-layer" playsinline webkit-playsinline muted loop preload="auto"></video>
 
     <div id="swipe-hint" class="swipe-hint"><div class="hand-icon">👆</div></div>
 
@@ -158,19 +133,14 @@
         </div>
         <div class="right-actions">
             <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div><span class="action-text">93</span></div>
-            
             <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg></div><span class="action-text">Share</span></div>
-            
             <div class="action-btn">
                 <div class="icon-circle">
                     <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14.5 4l-9.5 9.5a2.5 2.5 0 0 0 3.5 3.5l9.5-9.5"/>
-                        <path d="M18 7L21 4" stroke-width="2.5"/><path d="M14 10L12 7" stroke-width="2"/><path d="M20 10L22 13" stroke-width="2"/>
-                        <path d="M19.5 2.5l1 1-1 1-1-1 1-1z" fill="white" stroke="none"/>
+                        <path d="M14.5 4l-9.5 9.5a2.5 2.5 0 0 0 3.5 3.5l9.5-9.5"/><path d="M18 7L21 4" stroke-width="2.5"/><path d="M14 10L12 7" stroke-width="2"/><path d="M20 10L22 13" stroke-width="2"/><path d="M19.5 2.5l1 1-1 1-1-1 1-1z" fill="white" stroke="none"/>
                     </svg>
                 </div>
             </div>
-
             <div class="dots-menu"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
         </div>
         <div class="bottom-info">
@@ -182,171 +152,94 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    const video = document.getElementById("main-video");
+    // --- 1. ПЕРЕВОДЫ ---
+    const translations = {
+        'en': "Continue Watching", 'ru': "Смотреть дальше", 'es': "Continuar viendo", 'de': "Weiter ansehen", 'fr': "Continuer à regarder", 'pt': "Continuar assistindo", 'it': "Continua a guardare", 'tr': "İzlemeye devam et", 'ar': "متابعة المشاهدة", 'zh': "继续观看", 'ja': "視聴を続ける", 'ko': "계속 시청하기", 'hi': "देखना जारी रखें", 'id': "Lanjutkan Menonton", 'vi': "Tiếp tục xem", 'th': "ดูต่อ"
+    };
+    const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
+    const langText = document.getElementById("lang-text");
+    langText.innerText = translations[userLang] || translations['en'];
+    if (userLang === 'ar') document.querySelector('.glass-btn').style.direction = 'rtl';
+
+    // --- 2. DOUBLE BUFFER INIT ---
+    const v1 = document.getElementById('v1');
+    const v2 = document.getElementById('v2');
     const swipeHint = document.getElementById("swipe-hint");
     const clickHint = document.getElementById("click-hint");
-    const langText = document.getElementById("lang-text");
-    const loader = document.getElementById("loader");
     const wrapper = document.querySelector('.reels-wrapper');
 
-    // --- 1. ВСЕ ЯЗЫКИ ---
-    const translations = {
-        'en': "Continue Watching",
-        'ru': "Смотреть дальше",
-        'es': "Continuar viendo",
-        'de': "Weiter ansehen",
-        'fr': "Continuer à regarder",
-        'pt': "Continuar assistindo",
-        'it': "Continua a guardare",
-        'tr': "İzlemeye devam et",
-        'ar': "متابعة المشاهدة",      
-        'zh': "继续观看",            
-        'ja': "視聴を続ける",          
-        'ko': "계속 시청하기",          
-        'hi': "देखना जारी रखें",       
-        'id': "Lanjutkan Menonton",  
-        'vi': "Tiếp tục xem",        
-        'th': "ดูต่อ"                
-    };
-
-    // Авто-определение языка
-    const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
-    langText.innerText = translations[userLang] || translations['en'];
-    
-    // Арабский RTL фикс
-    if (userLang === 'ar') {
-        document.querySelector('.glass-btn').style.direction = 'rtl';
-    }
-
-    // --- 2. НАСТРОЙКИ ---
     const urlParams = new URLSearchParams(window.location.search);
     const offerID = urlParams.get('v') || '1';
-    let currentReelIndex = 1;
     
-    // Anti-Cache timestamp, чтобы телеграм не кешировал битое видео
-    const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4?t=${Date.now()}`;
+    // Пути к видео (Anti-cache randomizer не нужен, если имена файлов меняются)
+    const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
 
-    video.src = getPath(currentReelIndex);
-    
-    video.onerror = function() {
-        if (currentReelIndex > 1) {
-            console.log("Video not found, looping");
-            currentReelIndex = 1; 
-            video.src = getPath(currentReelIndex); 
-            video.load(); 
-            video.play().catch(()=>{});
-        }
-    };
-    video.play().catch(() => {});
+    // Инициализация
+    // V1 - играет сейчас
+    v1.src = getPath(1);
+    v1.play().catch(()=>{});
+
+    // V2 - грузится на фоне (Preload)
+    v2.src = getPath(2);
+    v2.load(); // Важно: заставляем браузер загрузить буфер
 
     let stage = 1; 
     let touchStartY = 0;
     let touchEndY = 0;
-    let isAnimating = false;
 
-    // --- 3. СМЕНА ВИДЕО (WEBVIEW FIX) ---
-    function triggerVisualSwipe() {
-        if (isAnimating) return;
-        isAnimating = true;
-
+    // --- 3. МГНОВЕННОЕ ПЕРЕКЛЮЧЕНИЕ ---
+    function doSwap() {
+        // Убираем палец
         swipeHint.style.display = 'none';
-        
-        // 1. Анимация ухода
-        video.classList.add('slide-out-up');
 
-        setTimeout(() => {
-            currentReelIndex++; 
-            const nextSource = getPath(currentReelIndex);
-            
-            // 2. Скрываем видео и показываем ЛОАДЕР
-            video.classList.add('loading');
-            loader.style.display = 'block'; // Показываем крутилку
-            
-            video.src = nextSource;
-            video.load(); 
+        // 1. Ставим активное видео на паузу и прячем
+        v1.pause();
+        v1.classList.remove('active');
 
-            // Функция запуска (когда видео готово)
-            const playVideo = () => {
-                video.play().then(() => {
-                    // Успех
-                    loader.style.display = 'none';
-                    video.classList.remove('loading');
-                    
-                    video.classList.remove('slide-out-up');
-                    video.classList.add('slide-in-up');
+        // 2. Показываем второе видео и ЗАПУСКАЕМ (Прямой вызов play без задержек)
+        v2.classList.add('active');
+        v2.play().catch(e => console.error("Play error:", e));
 
-                    setTimeout(() => {
-                        showButton();
-                        video.classList.remove('slide-in-up');
-                        isAnimating = false;
-                        stage = 2; 
-                    }, 400);
-
-                }).catch((e) => {
-                    console.error("Play blocked:", e);
-                    // Если блок - всё равно показываем кнопку и убираем лоадер
-                    loader.style.display = 'none';
-                    showButton();
-                });
-            };
-
-            // Ждем готовности
-            video.oncanplay = function() {
-                playVideo();
-                video.oncanplay = null;
-            };
-
-            // ТАЙМАУТ БЕЗОПАСНОСТИ (2.5 сек)
-            // Если видео тяжелое и не грузится в ТГ - просто покажем кнопку, 
-            // чтобы юзер мог кликнуть и уйти на оффер, а не пялиться в черный экран.
-            setTimeout(() => {
-                if (stage === 1) {
-                    console.log("Timeout reached. Force show button.");
-                    loader.style.display = 'none';
-                    showButton();
-                    stage = 2;
-                }
-            }, 2500);
-
-        }, 350);
-    }
-
-    function showButton() {
+        // 3. Показываем кнопку
         clickHint.style.display = 'flex';
+        
+        // 4. Логика смены этапа
+        stage = 2;
     }
 
-    // --- СВАЙПЫ ---
+    // --- TOUCH EVENTS ---
     wrapper.addEventListener('touchstart', function(e) {
         touchStartY = e.changedTouches[0].screenY;
     }, {passive: true});
 
     wrapper.addEventListener('touchend', function(e) {
         touchEndY = e.changedTouches[0].screenY;
-        if (touchStartY - touchEndY > 50) { 
+        
+        if (touchStartY - touchEndY > 50) { // Свайп вверх
             if (stage === 1) {
-                const fakeClick = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
-                wrapper.dispatchEvent(fakeClick); 
-                triggerVisualSwipe();
+                // Прямой вызов смены видео в обработчике touchend
+                // Это "Trusted" событие для браузера, поэтому play() сработает!
+                doSwap();
             } else {
+                // Блокировка свайпа на 2 этапе
                 const btn = document.querySelector('.glass-btn');
                 if(btn) {
-                    clickHint.classList.remove('shake');
-                    void clickHint.offsetWidth; 
-                    clickHint.classList.add('shake');
+                    btn.classList.remove('shake');
+                    void btn.offsetWidth; 
+                    btn.classList.add('shake');
                 }
             }
         }
     }, {passive: true});
 
-    // --- КЛИКИ ---
+    // --- CLICKS ---
     wrapper.addEventListener("click", function(e) {
-        if (!e.isTrusted && stage === 1) { e.stopPropagation(); return; }
-
         if (stage === 1) {
-            e.stopPropagation(); e.stopImmediatePropagation();
-            triggerVisualSwipe();
+            // Клик на 1 этапе тоже меняет видео
+            doSwap();
         } else {
-            console.log("Click -> Exit");
+            // Клик на 2 этапе - пропускаем к MainExit
+            console.log("Exit Click");
         }
     }); 
 });
