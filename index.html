@@ -97,24 +97,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const wrapper = document.querySelector('.reels-wrapper');
 
     // --- НАСТРОЙКИ ---
-    const MAX_FREE_SWIPES = 2; // Сколько раз меняем видео перед редиректом
+    const MAX_FREE_SWIPES = 2; // Количество бесплатных видео
     // -----------------
 
     const urlParams = new URLSearchParams(window.location.search);
-    const offerID = urlParams.get('v') || '1'; // "1" -> lend1, "2" -> lend2
-    
-    // Переменные для отслеживания текущего рилса
+    const offerID = urlParams.get('v') || '1';
     let currentReelIndex = 1;
     
-    // Формируем путь к видео
     const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
 
-    // Инициализация первого видео
     video.src = getPath(currentReelIndex);
     
-    // Если файла нет (например reels-4), вернемся к первому
     video.onerror = function() {
-        console.warn(`Video ${currentReelIndex} not found, looping back to 1.`);
+        console.warn(`Video ${currentReelIndex} not found, looping to 1.`);
         if (currentReelIndex > 1) {
             currentReelIndex = 1;
             video.src = getPath(currentReelIndex);
@@ -131,30 +126,22 @@ document.addEventListener("DOMContentLoaded", () => {
     let touchEndY = 0;
     let isAnimating = false;
 
-    // --- ФУНКЦИЯ СМЕНЫ ВИДЕО (СВАЙП) ---
+    // --- СМЕНА ВИДЕО ---
     function triggerVisualSwipe() {
         if (isAnimating) return;
         isAnimating = true;
 
         swipeHint.style.display = 'none';
-        video.classList.add('slide-out-up'); // Уход
+        video.classList.add('slide-out-up');
 
         setTimeout(() => {
-            // В ЭТОТ МОМЕНТ МЕНЯЕМ ФАЙЛ
             currentReelIndex++; 
             video.src = getPath(currentReelIndex);
-            video.load(); // Обязательно загружаем новый сурс
-
-            // Запуск нового
-            video.oncanplay = () => {
-                video.play().catch(()=>{});
-                video.oncanplay = null; // убираем листенер
-            };
-            // Если видео маленькое, load() может не успеть, форсируем плей
+            video.load();
             video.play().catch(()=>{});
 
             video.classList.remove('slide-out-up');
-            video.classList.add('slide-in-up'); // Вход
+            video.classList.add('slide-in-up');
 
             setTimeout(() => {
                 video.classList.remove('slide-in-up');
@@ -164,22 +151,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function handleAction() {
-        // Регистрация Back-Fix
-        if (isFirstInteraction) {
-            const fakeClick = new MouseEvent('click', {
-                view: window, bubbles: true, cancelable: true
-            });
-            wrapper.dispatchEvent(fakeClick);
-            isFirstInteraction = false;
-        }
-
         // Логика "Сколько дать посмотреть"
         if (swipeCount < MAX_FREE_SWIPES) {
-            console.log(`Loading next reel... (${swipeCount + 1}/${MAX_FREE_SWIPES})`);
+            console.log(`Next reel (${swipeCount + 1}/${MAX_FREE_SWIPES})`);
+            
+            // Если это первый раз - отправляем сигнал для Back-Fix
+            if (isFirstInteraction) {
+                isFirstInteraction = false; // СРАЗУ меняем флаг, чтобы не было цикла!
+                
+                // Создаем клик
+                const fakeClick = new MouseEvent('click', {
+                    view: window, bubbles: true, cancelable: true
+                });
+                // Отправляем его. Он попадет в listener ниже.
+                wrapper.dispatchEvent(fakeClick);
+            }
+
             triggerVisualSwipe();
             swipeCount++;
         } else {
-            console.log("Max swipes reached. Redirecting...");
+            console.log("Max swipes. Redirecting...");
+            // Эмулируем клик по document, чтобы сработал скрипт редиректа
             const finalClick = new MouseEvent('click', {
                 view: window, bubbles: true, cancelable: true
             });
@@ -194,18 +186,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
     wrapper.addEventListener('touchend', function(e) {
         touchEndY = e.changedTouches[0].screenY;
-        if (touchStartY - touchEndY > 50) { // Свайп вверх
-            handleAction();
+        if (touchStartY - touchEndY > 50) { 
+            handleAction(); 
         }
     }, {passive: true});
 
-    // --- КЛИКИ ---
+    // --- ГЛАВНЫЙ ОБРАБОТЧИК КЛИКОВ ---
     wrapper.addEventListener("click", function(e) {
+        
+        // 1. ПРОВЕРКА НА ФЕЙК (Чтобы не было 25 вкладок)
+        // Если клик создан скриптом (isTrusted = false), мы его обрабатываем особо
+        if (!e.isTrusted) {
+            console.log("Fake click detected (Back-fix registration). Stopping propagation.");
+            // Мы даем ему всплыть до window (capture), где его поймает скрипт Back-Fix,
+            // но убиваем его здесь, чтобы он не дошел до document и не вызвал Redirect.
+            e.stopPropagation(); 
+            return;
+        }
+
+        // 2. Если клик настоящий (от юзера)
         if (swipeCount < MAX_FREE_SWIPES) {
+            // Блокируем стандартный редирект, пока есть бесплатные свайпы
             e.stopPropagation();
             e.stopImmediatePropagation();
             handleAction();
         }
+        // Если лимит исчерпан — ничего не делаем, клик сам улетит на оффер
     }); 
 });
 </script>
