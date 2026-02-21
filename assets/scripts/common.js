@@ -1,20 +1,11 @@
-/* common.js — FINAL v11 (Hybrid) — FULL (no-push)
-   - All exits: mainExit/back/reverse/autoexit/ageExit/tabUnderClick + any custom exits via APP_CONFIG normalizer
-   - FAST/SLOW clone behavior (micro-handoff):
-       * Player targets: main_play => SLOW clone, micro-controls => FAST clone
-   - ClickMap modes (IMPORTANT):
-       * APP_CONFIG.clickMapMode = "player" (default) -> capture clickMap ON
-       * APP_CONFIG.clickMapMode = "reels"           -> clickMap OFF (safe for stage/swipe scripts)
-       * APP_CONFIG.clickMapMode = "off"             -> no clickMap
-   - Mini-triggers layer (always ON unless APP_CONFIG.disableMiniTriggers):
-       * Any element with [data-mt] triggers exits/micro:
-         data-mt="mainExit|back|reverse|autoexit|ageExit|tabUnderClick|<any exit name>|micro"
-         data-fast="1" => micro FAST
-         data-stop="1" => prevent/stop propagation
-   - Reverse popstate filtered by state marker
-   - buildDirectUrlWithTracking does safe merge (pass-through original params if missing)
-   - Guard against double boot: window.__COMMON_BOOTED__
-*/
+/* =========================
+   FILE: ./assets/scripts/common.js
+   common.js — FULL v11 (no-push) — REELS/PLAYER compatible
+   - Exits: mainExit/back/reverse/autoexit/ageExit/tabUnderClick + any custom exits via APP_CONFIG normalizer
+   - Mini-triggers: [data-mt] layer (works in reels)
+   - ClickMap: only when APP_CONFIG.clickMapMode="player"
+   - Back-queue FIX: ONE browser Back => back.html (replaceState top entry)
+   ========================= */
 
 (() => {
   "use strict";
@@ -23,7 +14,7 @@
   // Anti double boot guard
   // ---------------------------
   if (window.__COMMON_BOOTED__) return;
-  window.__COMMON_BOOTED__ = "v11-full-nopush";
+  window.__COMMON_BOOTED__ = "v11-full-nopush-reelsfix";
 
   // ---------------------------
   // Helpers
@@ -35,7 +26,6 @@
     try { window.location.replace(url); } catch { window.location.href = url; }
   };
 
-  // --- Direct open (no about:blank) ---
   const openTab = (url) => {
     try {
       const w = window.open(url, "_blank");
@@ -47,7 +37,7 @@
   };
 
   // ---------------------------
-  // URL + params (snapshot)
+  // URL + params snapshot
   // ---------------------------
   const curUrl = new URL(window.location.href);
   const getSP = (k, def = "") => curUrl.searchParams.get(k) ?? def;
@@ -63,10 +53,7 @@
     use_full_list_or_browsers: getSP("use_full_list_or_browsers"),
     cid: getSP("cid"), geo: getSP("geo"),
 
-    // ExoClick conversions_tracking passthrough
     external_id: getSP("external_id"),
-
-    // Optional passthroughs
     creative_id: getSP("creative_id"),
     ad_campaign_id: getSP("ad_campaign_id"),
     cost: getSP("cost"),
@@ -107,7 +94,7 @@
   };
 
   // ---------------------------
-  // Config Normalizer
+  // Config normalizer
   // ---------------------------
   const normalizeConfig = (appCfg) => {
     if (!appCfg || typeof appCfg !== "object" || !appCfg.domain) return null;
@@ -131,7 +118,7 @@
       m = k.match(/^([a-zA-Z0-9]+)_(count|timeToRedirect|pageUrl)$/);
       if (m) { ensure(m[1])[m[2]] = v; return; }
 
-      // name_zoneId | name_url
+      // name_zoneId | name_url  (short forms)
       m = k.match(/^([a-zA-Z0-9]+)_(zoneId|url)$/);
       if (m) {
         const [, name, field] = m;
@@ -146,7 +133,7 @@
   };
 
   // ---------------------------
-  // URL Builders
+  // URL builders
   // ---------------------------
   const buildExitQSFast = ({ zoneId }) => {
     const ab2r = IN.abtest || (typeof window.APP_CONFIG?.abtest !== "undefined" ? String(window.APP_CONFIG.abtest) : "");
@@ -171,7 +158,6 @@
       ae: IN.ae || "",
       ab2r,
 
-      // tracking passthrough
       external_id: IN.external_id || "",
       creative_id: IN.creative_id || "",
       ad_campaign_id: IN.ad_campaign_id || "",
@@ -191,21 +177,15 @@
     return url.toString();
   };
 
-  // ---------------------------
-  // Direct URL builder (tabUnderClick_url / any ex.url)
-  // - inject tracking params
-  // - pass-through original params if missing (safe merge)
-  // ---------------------------
   const buildDirectUrlWithTracking = (baseUrl) => {
     try {
       const u = new URL(String(baseUrl), window.location.href);
 
-      // 1) pass-through everything from landing (only if missing on target)
+      // pass-through everything from landing only if missing
       for (const [k, v] of curUrl.searchParams.entries()) {
         if (!u.searchParams.has(k) && v != null && String(v) !== "") u.searchParams.set(k, v);
       }
 
-      // 2) enforce key tracking fields (priority)
       const external_id = IN.external_id || "";
       const ad_campaign_id = IN.ad_campaign_id || IN.var_2 || "";
       const creative_id = IN.creative_id || "";
@@ -225,36 +205,47 @@
   };
 
   // ---------------------------
-  // Back & Exits
+  // Back queue (ONE BACK GUARANTEE)
   // ---------------------------
-  const pushBackStates = (url, count) => {
+  const pushBackStates = (backUrl, count) => {
     try {
       const n = Math.max(0, parseInt(count, 10) || 0);
       const originalUrl = window.location.href;
-      for (let i = 0; i < n; i++) window.history.pushState(null, "Please wait...", url);
-      window.history.pushState(null, document.title, originalUrl);
-    } catch (e) { err("Back pushState error:", e); }
+
+      for (let i = 0; i < n; i++) {
+        window.history.pushState({ __bk: 1 }, "Please wait...", backUrl);
+      }
+
+      // keep current entry as original WITHOUT adding extra entry
+      window.history.replaceState({ __bkTop: 1 }, document.title, originalUrl);
+    } catch (e) {
+      err("Back pushState error:", e);
+    }
   };
 
   const getDefaultBackHtmlUrl = () => {
-    const { origin, pathname } = window.location;
-    let dir = pathname.replace(/\/(index|back)\.html$/i, "");
-    if (dir.endsWith("/")) dir = dir.slice(0, -1);
-    if (!dir) return `${origin}/back.html`;
-    return `${origin}${dir}/back.html`;
+    try {
+      const u = new URL("./back.html", window.location.href);
+      return u.toString();
+    } catch {
+      const { origin } = window.location;
+      return `${origin}/back.html`;
+    }
   };
 
   const initBackFast = (cfg) => {
     const b = cfg?.back?.currentTab;
     if (!b) return;
+
     const count = cfg.back?.count ?? 10;
     const pageUrl = cfg.back?.pageUrl || getDefaultBackHtmlUrl();
     const page = new URL(pageUrl, window.location.href);
 
     const qs = buildExitQSFast({ zoneId: b.zoneId });
 
-    if (b.url) qs.set("url", String(b.url));
-    else {
+    if (b.url) {
+      qs.set("url", String(b.url));
+    } else {
       qs.set("z", String(b.zoneId));
       qs.set("domain", String(b.domain || cfg.domain || ""));
     }
@@ -263,6 +254,9 @@
     pushBackStates(page.toString(), count);
   };
 
+  // ---------------------------
+  // Resolve + runners
+  // ---------------------------
   const resolveUrlFast = (ex, cfg) => {
     if (!ex) return "";
     if (ex.url) return buildDirectUrlWithTracking(ex.url);
@@ -270,75 +264,55 @@
     return "";
   };
 
- /* ===========================
-   EXIT RUNNERS (CURRENT / DUAL) + DISPATCHER
-   PURPOSE:
-     - currentTab exit
-     - dual exit (newTab + currentTab) with popup-safe order:
-       openTab() -> initBack() -> replaceTo()
-   RULE:
-     - Replace your existing:
-       runExitCurrentTabFast, runExitDualTabsFast, run
-     - Paste this block exactly.
-   =========================== */
+  const runExitCurrentTabFast = (cfg, name, withBack = true) => {
+    const ex = cfg?.[name]?.currentTab;
+    if (!ex) return;
 
-const runExitCurrentTabFast = (cfg, name, withBack = true) => {
-  const ex = cfg?.[name]?.currentTab;
-  if (!ex) return;
+    const url = resolveUrlFast(ex, cfg);
+    if (!url) return;
 
-  const url = resolveUrlFast(ex, cfg);
-  if (!url) return;
+    safe(() => window.syncMetric?.({ event: name, exitZoneId: ex.zoneId || ex.url }));
 
-  safe(() => window.syncMetric?.({ event: name, exitZoneId: ex.zoneId || ex.url }));
+    if (withBack) { initBackFast(cfg); setTimeout(() => replaceTo(url), 40); }
+    else { replaceTo(url); }
+  };
 
-  if (withBack) {
-    initBackFast(cfg);
-    setTimeout(() => replaceTo(url), 40);
-  } else {
-    replaceTo(url);
-  }
-};
+  const runExitDualTabsFast = (cfg, name, withBack = true) => {
+    const ex = cfg?.[name];
+    if (!ex) return;
 
-const runExitDualTabsFast = (cfg, name, withBack = true) => {
-  const ex = cfg?.[name];
-  if (!ex) return;
+    const ct = ex.currentTab;
+    const nt = ex.newTab;
 
-  const ct = ex.currentTab;
-  const nt = ex.newTab;
+    const ctUrl = resolveUrlFast(ct, cfg);
+    const ntUrl = resolveUrlFast(nt, cfg);
 
-  const ctUrl = resolveUrlFast(ct, cfg);
-  const ntUrl = resolveUrlFast(nt, cfg);
+    safe(() => {
+      if (ctUrl) window.syncMetric?.({ event: name, exitZoneId: ct?.zoneId || ct?.url });
+      if (ntUrl) window.syncMetric?.({ event: name, exitZoneId: nt?.zoneId || nt?.url });
+    });
 
-  safe(() => {
-    if (ctUrl) window.syncMetric?.({ event: name, exitZoneId: ct?.zoneId || ct?.url });
-    if (ntUrl) window.syncMetric?.({ event: name, exitZoneId: nt?.zoneId || nt?.url });
-  });
+    // popup-safe order
+    if (ntUrl) openTab(ntUrl);
+    if (withBack) initBackFast(cfg);
+    if (ctUrl) setTimeout(() => replaceTo(ctUrl), 40);
+  };
 
-  // 1) OPEN NEW TAB FIRST (popup-safe, must be inside user gesture)
-  if (ntUrl) openTab(ntUrl);
+  const run = (cfg, name) => {
+    if (!name) return;
 
-  // 2) BACK QUEUE (current tab)
-  if (withBack) initBackFast(cfg);
+    if (name === "tabUnderClick" && !cfg?.tabUnderClick) {
+      return cfg?.mainExit?.newTab
+        ? runExitDualTabsFast(cfg, "mainExit", true)
+        : runExitCurrentTabFast(cfg, "mainExit", true);
+    }
 
-  // 3) REDIRECT CURRENT TAB
-  if (ctUrl) setTimeout(() => replaceTo(ctUrl), 40);
-};
+    if (cfg?.[name]?.newTab) return runExitDualTabsFast(cfg, name, true);
+    return runExitCurrentTabFast(cfg, name, true);
+  };
 
-const run = (cfg, name) => {
-  if (!name) return;
-
-  // fallback: if tabUnderClick missing -> behave like mainExit
-  if (name === "tabUnderClick" && !cfg?.tabUnderClick) {
-    return cfg?.mainExit?.newTab
-      ? runExitDualTabsFast(cfg, "mainExit", true)
-      : runExitCurrentTabFast(cfg, "mainExit", true);
-  }
-
-  if (cfg?.[name]?.newTab) return runExitDualTabsFast(cfg, name, true);
-  return runExitCurrentTabFast(cfg, name, true);
-};
   // ---------------------------
-  // Reverse, Autoexit, Ready
+  // Reverse (popstate)
   // ---------------------------
   const initReverse = (cfg) => {
     if (!cfg?.reverse?.currentTab) return;
@@ -348,6 +322,9 @@ const run = (cfg, name) => {
     });
   };
 
+  // ---------------------------
+  // Autoexit
+  // ---------------------------
   const initAutoexit = (cfg) => {
     if (!cfg?.autoexit?.currentTab) return;
     const sec = parseInt(cfg.autoexit.timeToRedirect, 10) || 90;
@@ -368,67 +345,10 @@ const run = (cfg, name) => {
     ["mousemove", "click", "scroll"].forEach(ev => document.addEventListener(ev, cancel, { once: true }));
   };
 
-  const isPlayerReady = () => {
-    const btn = document.querySelector(".xh-main-play-trigger");
-    return !!(btn && btn.classList.contains("ready"));
-  };
-
   // ---------------------------
-  // Micro Handoff (clone + tabUnderClick redirect)
-  // ---------------------------
-  const MICRO_DONE_KEY = "__micro_done";
-
-  const buildCloneUrl = (fast) => {
-    const u = new URL(window.location.href);
-    u.searchParams.set(CLONE_PARAM, "1");
-
-    // FAST vs SLOW for your frameLoader
-    if (fast) u.searchParams.set("__fast", "1");
-    else u.searchParams.delete("__fast");
-
-    // (optional compat marker, but ONLY for fast now)
-    if (fast) u.searchParams.set("__skipPreview", "1");
-    else u.searchParams.delete("__skipPreview");
-
-    // sync video OR fake image
-    const video = document.querySelector("video");
-    const imgFrame = document.querySelector(".xh-frame");
-
-    if (video) {
-      u.searchParams.set("t", video.currentTime || 0);
-      const poster = video.getAttribute("poster");
-      if (poster) u.searchParams.set("__poster", poster);
-    } else if (imgFrame) {
-      u.searchParams.set("t", 0);
-      if (imgFrame.src) u.searchParams.set("__poster", imgFrame.src);
-    }
-
-    return u.toString();
-  };
-
-  const runMicroHandoff = (cfg, fast) => {
-    if (isClone) return;
-
-    if (safe(() => sessionStorage.getItem(MICRO_DONE_KEY)) === "1") return run(cfg, "mainExit");
-    safe(() => sessionStorage.setItem(MICRO_DONE_KEY, "1"));
-
-    const cloneUrl = buildCloneUrl(!!fast);
-    safe(() => window.syncMetric?.({ event: fast ? "micro_open_clone_fast" : "micro_open_clone_slow" }));
-    openTab(cloneUrl);
-
-    const ex = cfg?.tabUnderClick?.newTab || cfg?.tabUnderClick?.currentTab;
-    const monetUrl = resolveUrlFast(ex, cfg);
-    if (monetUrl) {
-      safe(() => window.syncMetric?.({ event: "tabUnderClick" }));
-      initBackFast(cfg);
-      setTimeout(() => replaceTo(monetUrl), 40);
-    } else {
-      run(cfg, "mainExit");
-    }
-  };
-
-  // ---------------------------
-  // Mini Triggers (универсальный слой)
+  // Mini-triggers (always-on)
+  // data-mt="mainExit|back|reverse|autoexit|ageExit|tabUnderClick|<any exit name>"
+  // data-stop="1" => stop event
   // ---------------------------
   const initMiniTriggers = (cfg) => {
     if (window.APP_CONFIG?.disableMiniTriggers) return;
@@ -441,15 +361,8 @@ const run = (cfg, name) => {
       if (!name) return;
 
       const stop = el.getAttribute("data-stop") === "1";
-      const fast = el.getAttribute("data-fast") === "1";
-
       if (stop) {
         e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-      }
-
-      if (name === "micro") {
-        runMicroHandoff(cfg, fast);
-        return;
       }
 
       run(cfg, name);
@@ -457,89 +370,12 @@ const run = (cfg, name) => {
   };
 
   // ---------------------------
-  // Click Map (PLAYER mode only)
+  // ClickMap (PLAYER only) — kept for other landings
   // ---------------------------
   const initClickMap = (cfg) => {
-    const fired = { mainExit: false, back: false };
-    const microTargets = new Set([
-      "timeline", "play_pause", "mute_unmute", "settings", "fullscreen", "pip_top", "pip_bottom"
-    ]);
-
-    // helper: decide fast vs slow per click
-    const consumeFastFlag = (fallback) => {
-      const v = (window.__FAST_CLICK__ === true);
-      // reset immediately so next click doesn't inherit accidentally
-      window.__FAST_CLICK__ = false;
-      return v || !!fallback;
-    };
+    const fired = { mainExit: false };
 
     document.addEventListener("click", (e) => {
-      const zone = e.target?.closest?.("[data-target]");
-      const t = zone?.getAttribute("data-target") || "";
-      const modal = document.getElementById("xh_exit_modal");
-      const banner = document.getElementById("xh_banner");
-
-      // 0) PLAY FLOW:
-      // ORIGINAL: main_play -> micro handoff (clone + tabUnder)
-      // CLONE:    main_play -> mainExit (dual)
-      if (t === "main_play") {
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-
-        if (isClone) {
-          if (fired.mainExit) return;
-          fired.mainExit = true;
-          run(cfg, "mainExit");
-          return;
-        }
-
-        // main_play => SLOW
-        runMicroHandoff(cfg, false);
-        return;
-      }
-
-      // 1) BANNER: IMAGE -> MAIN EXIT
-      if (t === "banner_main") {
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-        run(cfg, "mainExit");
-        return;
-      }
-
-      // 2) BANNER: CLOSE -> MICRO HANDOFF (FAST by default)
-      if (t === "banner_close") {
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-        if (banner) banner.style.display = "none";
-        runMicroHandoff(cfg, true);
-        return;
-      }
-
-      // 3) BACK UI BUTTON -> SHOW MODAL
-      if (t === "back_button") {
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-        if (modal) {
-          modal.style.display = "flex";
-          modal.setAttribute("aria-hidden", "false");
-          fired.back = true;
-        }
-        return;
-      }
-
-      // 4) MODAL: STAY -> MICRO HANDOFF (SLOW by default)
-      if (t === "modal_stay") {
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-        if (modal) { modal.style.display = "none"; modal.setAttribute("aria-hidden", "true"); }
-        runMicroHandoff(cfg, false);
-        return;
-      }
-
-      // 5) MODAL: LEAVE -> AGE EXIT (dual)
-      if (t === "modal_leave") {
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-        if (modal) { modal.style.display = "none"; modal.setAttribute("aria-hidden", "true"); }
-        run(cfg, "ageExit");
-        return;
-      }
-
-      // 6) CLONE -> MAIN EXIT (any click)
       if (isClone) {
         if (fired.mainExit) return;
         fired.mainExit = true;
@@ -548,15 +384,7 @@ const run = (cfg, name) => {
         return;
       }
 
-      // 7) MICRO CONTROLS -> MICRO HANDOFF (FAST)
-      if (microTargets.has(t)) {
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-        const fast = consumeFastFlag(true); // always fast for microTargets
-        runMicroHandoff(cfg, fast);
-        return;
-      }
-
-      // 8) MAIN EXIT (all others)
+      // default player behavior: any click -> mainExit
       if (fired.mainExit) return;
       fired.mainExit = true;
       e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
@@ -576,25 +404,20 @@ const run = (cfg, name) => {
     const cfg = normalizeConfig(window.APP_CONFIG);
     if (!cfg) return;
 
-    // Public API
+    // Public API for reels scripts
     window.LANDING_EXITS = {
       cfg,
       run: (name) => run(cfg, name),
       initBack: () => initBackFast(cfg),
-      microHandoff: (fast) => runMicroHandoff(cfg, fast),
-      isPlayerReady,
       isClone,
     };
 
-    // Always-on pieces (no push)
     initMiniTriggers(cfg);
     initAutoexit(cfg);
     initReverse(cfg);
 
-    // ClickMap modes
     const mode = String(window.APP_CONFIG?.clickMapMode || "player").toLowerCase();
     if (mode === "player") initClickMap(cfg);
-    // reels/off => do not attach clickMap
   };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
