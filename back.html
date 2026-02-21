@@ -2,35 +2,51 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Wait while redirecting...</title>
     <script>
-      const currentUrl = new URL(window.location.href)
-      const { searchParams } = currentUrl
-      const zoneParam = searchParams.get('z')
-      const domain = searchParams.get('domain')
-      const urlParam = searchParams.get('url')
+      (function() {
+        const currentUrl = new URL(window.location.href);
+        const sp = currentUrl.searchParams;
+        
+        const zoneParam = sp.get('z');
+        let domain = sp.get('domain') || "jup9.com";
+        const urlParam = sp.get('url');
 
-      searchParams.delete('z')
-      searchParams.delete('domain')
-      searchParams.delete('url')
+        // Очищаем служебные параметры, чтобы не дублировать их в финальной ссылке
+        sp.delete('z');
+        sp.delete('domain');
+        sp.delete('url');
 
-      if (urlParam) {
-        window.location.href = `${urlParam}?${searchParams}`
-      } else if (zoneParam) {
-        window.location.replace(`${domain}/afu.php?${searchParams}`)
-      } else {
-        window.location.href = 'https://google.com'
-        console.error('Zone param or url param were missed')
-      }
+        // 1. Исправляем протокол домена (обязательно для внешнего редиректа)
+        if (domain && !domain.startsWith('http')) {
+            domain = 'https://' + domain;
+        }
+        domain = domain.replace(/\/+$/, ""); // убираем лишние слэши в конце
+
+        let finalUrl = "";
+
+        if (urlParam) {
+            // Если есть прямой URL
+            const connector = urlParam.includes('?') ? '&' : '?';
+            finalUrl = urlParam + connector + sp.toString();
+        } else if (zoneParam) {
+            // Если идем через afu.php (важно: возвращаем zoneid)
+            sp.set('zoneid', zoneParam); 
+            finalUrl = domain + "/afu.php?" + sp.toString();
+        } else {
+            finalUrl = 'https://google.com';
+        }
+
+        // Выполняем переход
+        if (finalUrl) {
+            window.location.replace(finalUrl);
+        }
+      })();
     </script>
   </head>
-
-  <body>
-    <div style="display: flex; justify-self: center; align-items: center; height: 100vh">
+  <body style="background: #000; color: #fff;">
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif;">
       <h1>Wait while redirecting...</h1>
     </div>
   </body>
