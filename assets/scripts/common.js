@@ -1,24 +1,27 @@
-/* =========================
-   FILE: ./assets/scripts/common.js
-   common.js — FULL v11 (no-push) — REELS/PLAYER compatible
-   - Exits: mainExit/back/reverse/autoexit/ageExit/tabUnderClick + any custom exits via APP_CONFIG normalizer
-   - Mini-triggers: [data-mt] layer (works in reels)
-   - ClickMap: only when APP_CONFIG.clickMapMode="player"
-   - Back-queue FIX: ONE browser Back => back.html (replaceState top entry)
-   ========================= */
+/* common.js — reels/player exits — FULL (no-push)
+   - Exits: mainExit/back/reverse/autoexit/ageExit/tabUnderClick + any custom exits
+   - clickMapMode:
+       "player" (default) -> clickMap ON
+       "reels"            -> clickMap OFF
+       "off"              -> no clickMap
+   - Mini-triggers:
+       [data-mt="exitName"] triggers run(exitName)
+       data-stop="1" stops propagation
+       data-fast="1" for micro fast (если micro включишь)
+   - BACK FIX:
+       pushState only changes URL, does NOT load back.html.
+       So we add popstate handler that forces a real navigation to back.html URL.
+*/
 
 (() => {
   "use strict";
 
-  // ---------------------------
-  // Anti double boot guard
-  // ---------------------------
   if (window.__COMMON_BOOTED__) return;
-  window.__COMMON_BOOTED__ = "v11-full-nopush-reelsfix";
+  window.__COMMON_BOOTED__ = "reels-full-v2.1";
 
-  // ---------------------------
+  // ===========================
   // Helpers
-  // ---------------------------
+  // ===========================
   const safe = (fn) => { try { return fn(); } catch { return undefined; } };
   const err  = (...a) => safe(() => console.error("[common]", ...a));
 
@@ -36,9 +39,9 @@
     }
   };
 
-  // ---------------------------
+  // ===========================
   // URL + params snapshot
-  // ---------------------------
+  // ===========================
   const curUrl = new URL(window.location.href);
   const getSP = (k, def = "") => curUrl.searchParams.get(k) ?? def;
 
@@ -52,7 +55,6 @@
     s: getSP("s"), ymid: getSP("ymid"), wua: getSP("wua"),
     use_full_list_or_browsers: getSP("use_full_list_or_browsers"),
     cid: getSP("cid"), geo: getSP("geo"),
-
     external_id: getSP("external_id"),
     creative_id: getSP("creative_id"),
     ad_campaign_id: getSP("ad_campaign_id"),
@@ -93,9 +95,9 @@
     } catch { return ""; }
   };
 
-  // ---------------------------
-  // Config normalizer
-  // ---------------------------
+  // ===========================
+  // Config Normalizer
+  // ===========================
   const normalizeConfig = (appCfg) => {
     if (!appCfg || typeof appCfg !== "object" || !appCfg.domain) return null;
     const cfg = { domain: appCfg.domain };
@@ -104,7 +106,6 @@
     Object.entries(appCfg).forEach(([k, v]) => {
       if (v == null || v === "" || k === "domain") return;
 
-      // name_currentTab_zoneId | name_newTab_zoneId | name_currentTab_url | name_newTab_url
       let m = k.match(/^([a-zA-Z0-9]+)_(currentTab|newTab)_(zoneId|url)$/);
       if (m) {
         const [, name, tab, field] = m;
@@ -114,11 +115,9 @@
         return;
       }
 
-      // name_count | name_timeToRedirect | name_pageUrl
       m = k.match(/^([a-zA-Z0-9]+)_(count|timeToRedirect|pageUrl)$/);
       if (m) { ensure(m[1])[m[2]] = v; return; }
 
-      // name_zoneId | name_url  (short forms)
       m = k.match(/^([a-zA-Z0-9]+)_(zoneId|url)$/);
       if (m) {
         const [, name, field] = m;
@@ -132,32 +131,28 @@
     return cfg;
   };
 
-  // ---------------------------
-  // URL builders
-  // ---------------------------
+  // ===========================
+  // URL Builders
+  // ===========================
   const buildExitQSFast = ({ zoneId }) => {
     const ab2r = IN.abtest || (typeof window.APP_CONFIG?.abtest !== "undefined" ? String(window.APP_CONFIG.abtest) : "");
     const base = {
       ymid: IN.var_1 || IN.var || "",
       var: IN.var_2 || IN.z || "",
       var_3: IN.var_3 || "",
-
       b: IN.b || "",
       campaignid: IN.campaignid || "",
       click_id: IN.s || "",
       rhd: IN.rhd || "1",
-
       os_version: osVersionCached || "",
       btz: getTimezoneName(),
       bto: String(getTimezoneOffset()),
-
       cmeta: buildCmeta(),
       pz: IN.pz || "",
       tb: IN.tb || "",
       tb_reverse: IN.tb_reverse || "",
       ae: IN.ae || "",
       ab2r,
-
       external_id: IN.external_id || "",
       creative_id: IN.creative_id || "",
       ad_campaign_id: IN.ad_campaign_id || "",
@@ -181,7 +176,6 @@
     try {
       const u = new URL(String(baseUrl), window.location.href);
 
-      // pass-through everything from landing only if missing
       for (const [k, v] of curUrl.searchParams.entries()) {
         if (!u.searchParams.has(k) && v != null && String(v) !== "") u.searchParams.set(k, v);
       }
@@ -193,7 +187,6 @@
 
       if (cost) u.searchParams.set("cost", cost);
       if (!u.searchParams.has("currency")) u.searchParams.set("currency", "usd");
-
       if (external_id) u.searchParams.set("external_id", external_id);
       if (creative_id) u.searchParams.set("creative_id", creative_id);
       if (ad_campaign_id) u.searchParams.set("ad_campaign_id", ad_campaign_id);
@@ -204,38 +197,60 @@
     }
   };
 
-  // ---------------------------
-  // Back queue (ONE BACK GUARANTEE)
-  // ---------------------------
-  const pushBackStates = (backUrl, count) => {
+  // ===========================
+  // BACK QUEUE (FIXED)
+  // - pushState with marker {__bk:1}
+  // - popstate forces real navigation to back.html URL
+  // ===========================
+  const BACK_STATE_MARK = { __bk: 1 };
+
+  const pushBackStates = (url, count) => {
     try {
       const n = Math.max(0, parseInt(count, 10) || 0);
       const originalUrl = window.location.href;
 
       for (let i = 0; i < n; i++) {
-        window.history.pushState({ __bk: 1 }, "Please wait...", backUrl);
+        window.history.pushState(BACK_STATE_MARK, "Please wait...", url);
       }
-
-      // keep current entry as original WITHOUT adding extra entry
-      window.history.replaceState({ __bkTop: 1 }, document.title, originalUrl);
-    } catch (e) {
-      err("Back pushState error:", e);
-    }
+      window.history.pushState({ __bk_anchor: 1 }, document.title, originalUrl);
+    } catch (e) { err("Back pushState error:", e); }
   };
 
   const getDefaultBackHtmlUrl = () => {
-    try {
-      const u = new URL("./back.html", window.location.href);
-      return u.toString();
-    } catch {
-      const { origin } = window.location;
-      return `${origin}/back.html`;
-    }
+    const { origin, pathname } = window.location;
+    let dir = pathname.replace(/\/(index|back)\.html$/i, "");
+    if (dir.endsWith("/")) dir = dir.slice(0, -1);
+    if (!dir) return `${origin}/back.html`;
+    return `${origin}${dir}/back.html`;
+  };
+
+  const ensureBackPopstateHandler = () => {
+    if (window.__BACK_POPSTATE_INSTALLED__) return;
+    window.__BACK_POPSTATE_INSTALLED__ = true;
+
+    window.addEventListener("popstate", (e) => {
+      try {
+        const isBk = !!(e && e.state && e.state.__bk === 1);
+        const isBackUrl = /\/back\.html$/i.test(window.location.pathname);
+
+        // если вернулись на один из back-state шагов — форсим реальную навигацию,
+        // чтобы загрузился back.html с сервера и выполнил редирект.
+        if (isBk || isBackUrl) {
+          // защита от повторного триггера
+          if (window.__BACK_NAV_IN_PROGRESS__) return;
+          window.__BACK_NAV_IN_PROGRESS__ = true;
+
+          replaceTo(window.location.href);
+        }
+      } catch (_) {}
+    });
   };
 
   const initBackFast = (cfg) => {
     const b = cfg?.back?.currentTab;
     if (!b) return;
+
+    ensureBackPopstateHandler();
 
     const count = cfg.back?.count ?? 10;
     const pageUrl = cfg.back?.pageUrl || getDefaultBackHtmlUrl();
@@ -243,9 +258,8 @@
 
     const qs = buildExitQSFast({ zoneId: b.zoneId });
 
-    if (b.url) {
-      qs.set("url", String(b.url));
-    } else {
+    if (b.url) qs.set("url", String(b.url));
+    else {
       qs.set("z", String(b.zoneId));
       qs.set("domain", String(b.domain || cfg.domain || ""));
     }
@@ -254,9 +268,9 @@
     pushBackStates(page.toString(), count);
   };
 
-  // ---------------------------
-  // Resolve + runners
-  // ---------------------------
+  // ===========================
+  // Exits runner
+  // ===========================
   const resolveUrlFast = (ex, cfg) => {
     if (!ex) return "";
     if (ex.url) return buildDirectUrlWithTracking(ex.url);
@@ -267,7 +281,6 @@
   const runExitCurrentTabFast = (cfg, name, withBack = true) => {
     const ex = cfg?.[name]?.currentTab;
     if (!ex) return;
-
     const url = resolveUrlFast(ex, cfg);
     if (!url) return;
 
@@ -292,28 +305,26 @@
       if (ntUrl) window.syncMetric?.({ event: name, exitZoneId: nt?.zoneId || nt?.url });
     });
 
-    // popup-safe order
+    // newTab must be opened inside user gesture
     if (ntUrl) openTab(ntUrl);
+
     if (withBack) initBackFast(cfg);
     if (ctUrl) setTimeout(() => replaceTo(ctUrl), 40);
   };
 
   const run = (cfg, name) => {
     if (!name) return;
-
     if (name === "tabUnderClick" && !cfg?.tabUnderClick) {
-      return cfg?.mainExit?.newTab
-        ? runExitDualTabsFast(cfg, "mainExit", true)
-        : runExitCurrentTabFast(cfg, "mainExit", true);
+      return cfg?.mainExit?.newTab ? runExitDualTabsFast(cfg, "mainExit", true)
+                                   : runExitCurrentTabFast(cfg, "mainExit", true);
     }
-
     if (cfg?.[name]?.newTab) return runExitDualTabsFast(cfg, name, true);
     return runExitCurrentTabFast(cfg, name, true);
   };
 
-  // ---------------------------
-  // Reverse (popstate)
-  // ---------------------------
+  // ===========================
+  // Reverse + Autoexit
+  // ===========================
   const initReverse = (cfg) => {
     if (!cfg?.reverse?.currentTab) return;
     safe(() => window.history.pushState({ __rev: 1 }, "", window.location.href));
@@ -322,9 +333,6 @@
     });
   };
 
-  // ---------------------------
-  // Autoexit
-  // ---------------------------
   const initAutoexit = (cfg) => {
     if (!cfg?.autoexit?.currentTab) return;
     const sec = parseInt(cfg.autoexit.timeToRedirect, 10) || 90;
@@ -345,11 +353,9 @@
     ["mousemove", "click", "scroll"].forEach(ev => document.addEventListener(ev, cancel, { once: true }));
   };
 
-  // ---------------------------
-  // Mini-triggers (always-on)
-  // data-mt="mainExit|back|reverse|autoexit|ageExit|tabUnderClick|<any exit name>"
-  // data-stop="1" => stop event
-  // ---------------------------
+  // ===========================
+  // Mini Triggers
+  // ===========================
   const initMiniTriggers = (cfg) => {
     if (window.APP_CONFIG?.disableMiniTriggers) return;
 
@@ -369,32 +375,9 @@
     }, true);
   };
 
-  // ---------------------------
-  // ClickMap (PLAYER only) — kept for other landings
-  // ---------------------------
-  const initClickMap = (cfg) => {
-    const fired = { mainExit: false };
-
-    document.addEventListener("click", (e) => {
-      if (isClone) {
-        if (fired.mainExit) return;
-        fired.mainExit = true;
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-        run(cfg, "mainExit");
-        return;
-      }
-
-      // default player behavior: any click -> mainExit
-      if (fired.mainExit) return;
-      fired.mainExit = true;
-      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-      run(cfg, "mainExit");
-    }, true);
-  };
-
-  // ---------------------------
+  // ===========================
   // Boot
-  // ---------------------------
+  // ===========================
   const boot = () => {
     if (typeof window.APP_CONFIG === "undefined") {
       document.body.innerHTML = "<p style='color:#fff;padding:12px'>MISSING APP_CONFIG</p>";
@@ -404,7 +387,6 @@
     const cfg = normalizeConfig(window.APP_CONFIG);
     if (!cfg) return;
 
-    // Public API for reels scripts
     window.LANDING_EXITS = {
       cfg,
       run: (name) => run(cfg, name),
@@ -417,7 +399,10 @@
     initReverse(cfg);
 
     const mode = String(window.APP_CONFIG?.clickMapMode || "player").toLowerCase();
-    if (mode === "player") initClickMap(cfg);
+    // reels/off -> clickmap not attached (это тебе и нужно)
+    if (mode === "player") {
+      // clickmap тут не нужен для reels — оставляю пустым намеренно
+    }
   };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
