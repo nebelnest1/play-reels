@@ -268,6 +268,8 @@
       let stage = 1;
       let touchStartY = 0;
       let touchEndY = 0;
+      let touchStartX = 0;
+      let touchEndX = 0;
       let isAnimating = false;
 
       function armBackTrap() {
@@ -330,11 +332,20 @@
       // TOUCH LOGIC: Shake and Vibrate
       wrapper.addEventListener('touchstart', (e) => {
         touchStartY = e.changedTouches[0].screenY;
+        touchStartX = e.changedTouches[0].screenX;
       }, { passive: true });
 
       wrapper.addEventListener('touchend', (e) => {
         touchEndY = e.changedTouches[0].screenY;
-        if (touchStartY - touchEndY > 50) {
+        touchEndX = e.changedTouches[0].screenX;
+        
+        // Проверяем свайпы в любую сторону (вверх, вниз, вправо, влево)
+        const swipedUp = (touchStartY - touchEndY) > 50;
+        const swipedDown = (touchEndY - touchStartY) > 50;
+        const swipedRight = (touchEndX - touchStartX) > 50;
+        const swipedLeft = (touchStartX - touchEndX) > 50;
+
+        if (swipedUp || swipedDown || swipedRight || swipedLeft) {
           vib(40); // ВИБРАЦИЯ при свайпе
           if (stage === 1 && nextBtn) {
             nextBtn.classList.remove('shake');
