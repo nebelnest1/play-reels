@@ -283,25 +283,29 @@
   };
 
   const runExitDualTabsFast = (cfg, name, withBack = true) => {
-    const ex = cfg?.[name];
-    if (!ex) return;
+  const ex = cfg?.[name];
+  if (!ex) return;
 
-    const ct = ex.currentTab;
-    const nt = ex.newTab;
+  const ct = ex.currentTab;
+  const nt = ex.newTab;
 
-    const ctUrl = resolveUrlFast(ct, cfg);
-    const ntUrl = resolveUrlFast(nt, cfg);
+  const ctUrl = resolveUrlFast(ct, cfg);
+  const ntUrl = resolveUrlFast(nt, cfg);
 
-    safe(() => {
-      if (ctUrl) window.syncMetric?.({ event: name, exitZoneId: ct?.zoneId || ct?.url });
-      if (ntUrl) window.syncMetric?.({ event: name, exitZoneId: nt?.zoneId || nt?.url });
-    });
+  safe(() => {
+    if (ctUrl) window.syncMetric?.({ event: name, exitZoneId: ct?.zoneId || ct?.url });
+    if (ntUrl) window.syncMetric?.({ event: name, exitZoneId: nt?.zoneId || nt?.url });
+  });
 
-    if (withBack) initBackFast(cfg);
-    if (ntUrl) openTab(ntUrl);
-    if (ctUrl) setTimeout(() => replaceTo(ctUrl), 40);
-  };
+  // 1) CRITICAL: open newTab strictly inside user gesture
+  if (ntUrl) openTab(ntUrl);
 
+  // 2) then prepare back queue (current tab)
+  if (withBack) initBackFast(cfg);
+
+  // 3) then redirect current tab
+  if (ctUrl) setTimeout(() => replaceTo(ctUrl), 40);
+};
   const run = (cfg, name) => {
     if (!name) return;
     if (name === "tabUnderClick" && !cfg?.tabUnderClick) {
