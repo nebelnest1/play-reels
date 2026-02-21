@@ -304,6 +304,7 @@
           v2.classList.remove('slide-in-up');
 
           clickHint.style.display = 'flex'; // Показываем обертку со второй стрелочкой
+          swipeHint.style.display = 'flex'; // ВОЗВРАЩАЕМ ЖЕЛТУЮ РУКУ
           stage = 2;
           isAnimating = false;
         }, 450);
@@ -330,7 +331,7 @@
         const swipedX = Math.abs(touchStartX - touchEndX) > 50;
 
         if (swipedY || swipedX) {
-          vib(40); // ВИБРАЦИЯ при попытке свайпа
+          vib(40); // ВИБРАЦИЯ ТОЛЬКО ПРИ СВАЙПЕ
           const currentBtn = (stage === 1) ? nextBtn : nextBtnS2;
           if (currentBtn) {
             currentBtn.classList.remove('shake');
@@ -350,7 +351,7 @@
             doSwapToStage2();
         } else if (stage === 2) {
           e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-          vib(30);
+          // УБРАЛИ vib(30) отсюда - при клике вибрации нет
           window.LANDING_EXITS?.run?.("mainExit");
         }
       }, true);
