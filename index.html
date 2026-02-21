@@ -196,88 +196,124 @@
       let touchEndY = 0;
       let isAnimating = false;
 
-      // ===========================
-      // Back trap arm on Stage2 entry
-      // (делаем это на жесте, чтобы back-queue уже был "заряжен")
-      // ===========================
-      function armBackTrap() {
-        try { window.LANDING_EXITS?.initBack?.(); } catch(e) {}
+ // ===========================
+// STAGE2 ARM (HARD)
+// - guarantees: after swipe -> Back stays on landing (does NOT exit to referrer)
+// - then arms common.js back-queue when ready
+// ===========================
+function armStage2TrapHard() {
+  // 1) local anchor in history (instant, independent of common.js)
+  if (!window.__S2_ANCHOR_PUSHED__) {
+    try {
+      window.history.pushState({ __s2: 1 }, "", window.location.href);
+      window.__S2_ANCHOR_PUSHED__ = true;
+    } catch (e) {}
+  }
+
+  // 2) arm real back-queue (when common.js ready)
+  if (window.__BACK_ARMED_ON_STAGE2__) return;
+
+  const tryArm = () => {
+    try {
+      if (window.LANDING_EXITS?.initBack) {
+        window.LANDING_EXITS.initBack();
+        window.__BACK_ARMED_ON_STAGE2__ = true;
+        return true;
       }
+    } catch (e) {}
+    return false;
+  };
 
-      function doSwap() {
-        if (isAnimating) return;
-        isAnimating = true;
+  if (tryArm()) return;
 
-        swipeHint.style.display = 'none';
+  // common.js might not be ready at swipe moment -> wait a bit
+  const tick = setInterval(() => {
+    if (tryArm()) clearInterval(tick);
+  }, 50);
+  setTimeout(() => clearInterval(tick), 2500);
+}
 
-        v1.classList.add('slide-out-up');
-        v2.classList.add('slide-in-up');
-        v2.play().catch(()=>{});
+function doSwap() {
+  if (isAnimating) return;
+  isAnimating = true;
 
-        const newData = reelsData[2];
-        if (newData) {
-          uiUser.innerText = newData.user;
-          uiLikes.innerText = newData.likes;
-          uiDesc.innerHTML = newData.desc;
-          uiAvatar.style.backgroundColor = newData.color;
-        }
+  swipeHint.style.display = "none";
 
-        setTimeout(() => {
-          v1.classList.remove('active', 'slide-out-up');
-          v1.pause();
-          v2.classList.add('active');
-          v2.classList.remove('slide-in-up');
-          clickHint.style.display = 'flex';
-          stage = 2;
-          isAnimating = false;
-        }, 450);
+  v1.classList.add("slide-out-up");
+  v2.classList.add("slide-in-up");
+  v2.play().catch(()=>{});
+
+  const newData = reelsData[2];
+  if (newData) {
+    uiUser.innerText = newData.user;
+    uiLikes.innerText = newData.likes;
+    uiDesc.innerHTML = newData.desc;
+    uiAvatar.style.backgroundColor = newData.color;
+  }
+
+  setTimeout(() => {
+    v1.classList.remove("active", "slide-out-up");
+    v1.pause();
+
+    v2.classList.add("active");
+    v2.classList.remove("slide-in-up");
+
+    clickHint.style.display = "flex";
+    stage = 2;
+
+    isAnimating = false;
+  }, 450);
+}
+
+let suppressClickUntil = 0;
+
+wrapper.addEventListener("touchstart", (e) => {
+  touchStartY = e.changedTouches[0].screenY;
+}, { passive: true });
+
+// NOT passive
+wrapper.addEventListener("touchend", (e) => {
+  touchEndY = e.changedTouches[0].screenY;
+
+  if (touchStartY - touchEndY > 50) {
+    if (stage === 1) {
+      suppressClickUntil = Date.now() + 500;
+
+      // IMPORTANT: arm BEFORE UI changes while gesture is "fresh"
+      armStage2TrapHard();
+      doSwap();
+    } else {
+      const btn = document.querySelector(".glass-btn");
+      if (btn) {
+        btn.classList.remove("shake");
+        void btn.offsetWidth;
+        btn.classList.add("shake");
       }
+    }
+  }
+});
 
-      let suppressClickUntil = 0;
+wrapper.addEventListener("click", (e) => {
+  if (Date.now() < suppressClickUntil) {
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    return;
+  }
 
-      wrapper.addEventListener('touchstart', (e) => {
-        touchStartY = e.changedTouches[0].screenY;
-      }, { passive: true });
+  // if click on minitrigger => let common.js handle
+  if (e.target?.closest?.("[data-mt]")) return;
 
-      // НЕ passive — чтобы не мешать history/handlers (и вообще меньше сюрпризов)
-      wrapper.addEventListener('touchend', (e) => {
-        touchEndY = e.changedTouches[0].screenY;
+  if (stage === 1) {
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
 
-        if (touchStartY - touchEndY > 50) {
-          if (stage === 1) {
-            suppressClickUntil = Date.now() + 500;
-            armBackTrap();
-            doSwap();
-          } else {
-            const btn = document.querySelector('.glass-btn');
-            if (btn) {
-              btn.classList.remove('shake');
-              void btn.offsetWidth;
-              btn.classList.add('shake');
-            }
-          }
-        }
-      });
+    // IMPORTANT: arm on click too
+    armStage2TrapHard();
+    doSwap();
+    return;
+  }
 
-      wrapper.addEventListener("click", (e) => {
-        if (Date.now() < suppressClickUntil) {
-          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-          return;
-        }
-
-        // если клик по minitrigger — пусть common.js его обработает
-        if (e.target?.closest?.("[data-mt]")) return;
-
-        if (stage === 1) {
-          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-          armBackTrap();
-          doSwap();
-          return;
-        }
-
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-        window.LANDING_EXITS?.run?.("mainExit");
-      }, true);
+  e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+  window.LANDING_EXITS?.run?.("mainExit");
+}, true);
     });
   </script>
 </body>
