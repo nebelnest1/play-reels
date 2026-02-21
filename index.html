@@ -2,40 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <title>(1) Private Video Request</title>
   <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23ff0000"/><path d="M35 30 L75 50 L35 70 Z" fill="%23ffffff"/></svg>'>
 
-  <!-- ===========================
-  APP_CONFIG (REELS)
-  - clickMapMode = "reels" (common.js не лезет в клики)
-  - back_count = сколько "шагов назад" перехватываем
-  ============================ -->
   <script>
     var APP_CONFIG = {
       domain: "https://jup9.com",
       clickMapMode: "reels",
-
-      // --- MAIN EXIT (dual) ---
       mainExit_currentTab_zoneId: 10217421,
       mainExit_newTab_zoneId: 10217420,
-
-      // --- TABUNDER (если когда-нибудь понадобится micro) ---
       tabUnderClick_zoneId: 10217421,
-
-      // --- AGE EXIT (dual) ---
       ageExit_currentTab_zoneId: 10217421,
       ageExit_newTab_zoneId: 10217420,
-
-      // --- AUTOEXIT (current tab) ---
       autoexit_zoneId: 10217422,
       autoexit_timeToRedirect: 30,
-
-      // --- REVERSE (popstate -> current tab) ---
       reverse_zoneId: 10217419,
-
-      // --- BACK QUEUE ---
       back_zoneId: 10217423,
       back_count: 6
     };
@@ -53,17 +36,31 @@
     .glass-btn:active { transform: scale(0.95); }
     .glass-icon { width: 24px; height: 24px; fill: white; flex-shrink: 0; }
     .glass-text { color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    @keyframes pulseGlass { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); } 70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); } }
+
+    @keyframes pulseGlass {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    }
+
     .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-    @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-2px, 0, 0); }
+      20%, 80% { transform: translate3d(4px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+      40%, 60% { transform: translate3d(6px, 0, 0); }
+    }
+
     .slide-out-up { animation: slideOutUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-    .slide-in-up { animation: slideInUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; visibility: visible !important; z-index: 2 !important; }
+    .slide-in-up  { animation: slideInUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; visibility: visible !important; z-index: 2 !important; }
     @keyframes slideOutUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 1; } }
     @keyframes slideInUp  { 0% { transform: translateY(100%); opacity: 1; } 100% { transform: translateY(0); opacity: 1; } }
+
     .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
     .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
     .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 500; }
     .filter-icon { width: 14px; height: 14px; }
+
     .right-actions { position: absolute; right: 8px; bottom: 100px; display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: auto; }
     .action-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; }
     .icon-circle { width: 44px; height: 44px; background: rgba(30, 30, 30, 0.65); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); margin-bottom: 2px; }
@@ -71,14 +68,50 @@
     .action-text { font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
     .dots-menu { display: flex; gap: 4px; margin-top: 10px; opacity: 0.8; }
     .dot { width: 4px; height: 4px; background: #fff; border-radius: 50%; }
+
     .bottom-info { padding: 16px; color: #fff; margin-right: 60px; pointer-events: auto; }
     .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ff0050; border: 1px solid rgba(255,255,255,0.5); transition: background-color 0.3s; }
     .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
     .desc { font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+
     .swipe-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
     .hand-icon { font-size: 50px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: swipeUp 1.8s infinite ease-in-out; }
     @keyframes swipeUp { 0% { transform: translateY(40px); opacity: 0; } 40% { opacity: 1; } 80% { opacity: 0; } 100% { transform: translateY(-60px); opacity: 0; } }
+
+    /* ==========================
+       NEW: BIG "FOR DED" NEXT BUTTON
+       (old player style, not centered)
+    =========================== */
+    .next-btn {
+      position: absolute;
+      right: 18px;
+      bottom: 140px; /* рядом с правыми экшенами, но чуть отдельной кнопкой */
+      width: 78px;
+      height: 78px;
+      border-radius: 999px;
+      border: 2px solid rgba(255,255,255,0.25);
+      background: rgba(0,0,0,0.60);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.60);
+      z-index: 80;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      pointer-events: auto;
+      animation: nextPulse 1.8s infinite;
+    }
+    .next-btn:active { transform: scale(0.95); }
+    .next-btn svg { width: 36px; height: 36px; fill: #fff; transform: translateX(3px); filter: drop-shadow(0 2px 12px rgba(0,0,0,0.6)); }
+    .next-btn.hidden { display: none; }
+
+    @keyframes nextPulse {
+      0%   { transform: scale(1);    box-shadow: 0 20px 60px rgba(0,0,0,0.60), 0 0 0 0 rgba(255,255,255,0.18); }
+      70%  { transform: scale(1.07); box-shadow: 0 20px 60px rgba(0,0,0,0.60), 0 0 0 18px rgba(255,255,255,0); }
+      100% { transform: scale(1);    box-shadow: 0 20px 60px rgba(0,0,0,0.60), 0 0 0 0 rgba(255,255,255,0); }
+    }
   </style>
 
   <script defer src="./assets/scripts/common.js?v=2.1"></script>
@@ -86,10 +119,18 @@
 
 <body>
   <div class="reels-wrapper" id="click-trap">
+
     <video id="v1" class="video-layer active" playsinline webkit-playsinline muted loop preload="auto"></video>
     <video id="v2" class="video-layer" playsinline webkit-playsinline muted loop preload="auto"></video>
 
     <div id="swipe-hint" class="swipe-hint"><div class="hand-icon">👆</div></div>
+
+    <!-- NEW: NEXT BUTTON (stage1 -> stage2) -->
+    <button id="next-btn" class="next-btn" type="button" aria-label="Next">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 6l9 6-9 6V6z"></path>
+      </svg>
+    </button>
 
     <div id="click-hint" class="click-hint-overlay">
       <div class="glass-btn" data-mt="mainExit" data-stop="1">
@@ -140,7 +181,6 @@
             </svg>
           </div>
         </div>
-
         <div class="dots-menu"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
       </div>
 
@@ -175,7 +215,8 @@
       const v2 = document.getElementById('v2');
       const swipeHint = document.getElementById("swipe-hint");
       const clickHint = document.getElementById("click-hint");
-      const wrapper = document.querySelector('.reels-wrapper');
+      const wrapper = document.getElementById('click-trap');
+      const nextBtn = document.getElementById("next-btn");
 
       const uiUser = document.getElementById('ui-username');
       const uiLikes = document.getElementById('ui-likes');
@@ -192,128 +233,114 @@
       v2.load();
 
       let stage = 1;
-      let touchStartY = 0;
-      let touchEndY = 0;
       let isAnimating = false;
 
- // ===========================
-// STAGE2 ARM (HARD)
-// - guarantees: after swipe -> Back stays on landing (does NOT exit to referrer)
-// - then arms common.js back-queue when ready
-// ===========================
-function armStage2TrapHard() {
-  // 1) local anchor in history (instant, independent of common.js)
-  if (!window.__S2_ANCHOR_PUSHED__) {
-    try {
-      window.history.pushState({ __s2: 1 }, "", window.location.href);
-      window.__S2_ANCHOR_PUSHED__ = true;
-    } catch (e) {}
-  }
-
-  // 2) arm real back-queue (when common.js ready)
-  if (window.__BACK_ARMED_ON_STAGE2__) return;
-
-  const tryArm = () => {
-    try {
-      if (window.LANDING_EXITS?.initBack) {
-        window.LANDING_EXITS.initBack();
-        window.__BACK_ARMED_ON_STAGE2__ = true;
-        return true;
+      function armBackTrap() {
+        if (window.__BACK_ARMED_ON_STAGE2__) return;
+        try {
+          if (window.LANDING_EXITS?.initBack) {
+            window.LANDING_EXITS.initBack();
+            window.__BACK_ARMED_ON_STAGE2__ = true;
+            return;
+          }
+          const tick = setInterval(() => {
+            if (window.LANDING_EXITS?.initBack) {
+              window.LANDING_EXITS.initBack();
+              window.__BACK_ARMED_ON_STAGE2__ = true;
+              clearInterval(tick);
+            }
+          }, 50);
+          setTimeout(() => clearInterval(tick), 2000);
+        } catch(e) {}
       }
-    } catch (e) {}
-    return false;
-  };
 
-  if (tryArm()) return;
+      function doSwap() {
+        if (isAnimating) return;
+        isAnimating = true;
 
-  // common.js might not be ready at swipe moment -> wait a bit
-  const tick = setInterval(() => {
-    if (tryArm()) clearInterval(tick);
-  }, 50);
-  setTimeout(() => clearInterval(tick), 2500);
-}
+        swipeHint.style.display = 'none';
 
-function doSwap() {
-  if (isAnimating) return;
-  isAnimating = true;
+        v1.classList.add('slide-out-up');
+        v2.classList.add('slide-in-up');
+        v2.play().catch(()=>{});
 
-  swipeHint.style.display = "none";
+        const newData = reelsData[2];
+        if (newData) {
+          uiUser.innerText = newData.user;
+          uiLikes.innerText = newData.likes;
+          uiDesc.innerHTML = newData.desc;
+          uiAvatar.style.backgroundColor = newData.color;
+        }
 
-  v1.classList.add("slide-out-up");
-  v2.classList.add("slide-in-up");
-  v2.play().catch(()=>{});
+        setTimeout(() => {
+          v1.classList.remove('active', 'slide-out-up');
+          v1.pause();
 
-  const newData = reelsData[2];
-  if (newData) {
-    uiUser.innerText = newData.user;
-    uiLikes.innerText = newData.likes;
-    uiDesc.innerHTML = newData.desc;
-    uiAvatar.style.backgroundColor = newData.color;
-  }
+          v2.classList.add('active');
+          v2.classList.remove('slide-in-up');
 
-  setTimeout(() => {
-    v1.classList.remove("active", "slide-out-up");
-    v1.pause();
+          clickHint.style.display = 'flex';
 
-    v2.classList.add("active");
-    v2.classList.remove("slide-in-up");
+          stage = 2;
+          isAnimating = false;
 
-    clickHint.style.display = "flex";
-    stage = 2;
-
-    isAnimating = false;
-  }, 450);
-}
-
-let suppressClickUntil = 0;
-
-wrapper.addEventListener("touchstart", (e) => {
-  touchStartY = e.changedTouches[0].screenY;
-}, { passive: true });
-
-// NOT passive
-wrapper.addEventListener("touchend", (e) => {
-  touchEndY = e.changedTouches[0].screenY;
-
-  if (touchStartY - touchEndY > 50) {
-    if (stage === 1) {
-      suppressClickUntil = Date.now() + 500;
-
-      // IMPORTANT: arm BEFORE UI changes while gesture is "fresh"
-      armStage2TrapHard();
-      doSwap();
-    } else {
-      const btn = document.querySelector(".glass-btn");
-      if (btn) {
-        btn.classList.remove("shake");
-        void btn.offsetWidth;
-        btn.classList.add("shake");
+          // stage2: hide "next"
+          nextBtn.classList.add("hidden");
+        }, 450);
       }
-    }
-  }
-});
 
-wrapper.addEventListener("click", (e) => {
-  if (Date.now() < suppressClickUntil) {
-    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-    return;
-  }
+      function goStage2FromClick() {
+        if (stage !== 1) return;
+        armBackTrap();   // важное: арми BEFORE swap
+        doSwap();
+      }
 
-  // if click on minitrigger => let common.js handle
-  if (e.target?.closest?.("[data-mt]")) return;
+      // ----------------------------
+      // 1) NEXT BUTTON: stage1 -> stage2
+      // ----------------------------
+      nextBtn.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        goStage2FromClick();
+      }, true);
 
-  if (stage === 1) {
-    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      // ----------------------------
+      // 2) SWIPE: BLOCK stage change, just SHAKE button
+      // ----------------------------
+      let touchStartY = 0;
 
-    // IMPORTANT: arm on click too
-    armStage2TrapHard();
-    doSwap();
-    return;
-  }
+      wrapper.addEventListener('touchstart', (e) => {
+        touchStartY = e.changedTouches[0].screenY;
+      }, { passive: true });
 
-  e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-  window.LANDING_EXITS?.run?.("mainExit");
-}, true);
+      wrapper.addEventListener('touchend', (e) => {
+        const touchEndY = e.changedTouches[0].screenY;
+
+        // swipe up
+        if ((touchStartY - touchEndY) > 50 && stage === 1) {
+          // дед свайпает -> трясем "кнопку-вперед"
+          nextBtn.classList.remove('shake');
+          void nextBtn.offsetWidth;
+          nextBtn.classList.add('shake');
+        }
+      }, { passive: true });
+
+      // ----------------------------
+      // 3) CLICK: stage1 -> stage2, stage2 -> mainExit
+      // ----------------------------
+      wrapper.addEventListener("click", (e) => {
+        // if click on any mini-trigger element — let common.js handle it
+        if (e.target?.closest?.("[data-mt]")) return;
+
+        if (stage === 1) {
+          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          goStage2FromClick();
+          return;
+        }
+
+        // stage2: any click -> mainExit
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        window.LANDING_EXITS?.run?.("mainExit");
+      }, true);
     });
   </script>
 </body>
