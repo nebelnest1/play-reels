@@ -344,38 +344,60 @@
       let touchEndY = 0;
       let isAnimating = false;
 
-      // --- 4) SWAP (Animation + Swap) ---
-      function doSwap() {
-        if (isAnimating) return;
-        isAnimating = true;
+     /* ===========================
+   PATCH: doSwap() (STAGE2 + ARM BACK TRAP)
+   PURPOSE:
+     - On first transition to Stage 2:
+       * hide swipe hint
+       * animate swap
+       * update UI
+       * show CTA
+       * IMPORTANT: arm back-queue once (so browser Back goes to back.html)
+   RULE:
+     - Replace your entire existing doSwap() with this function.
+   =========================== */
 
-        swipeHint.style.display = "none";
+function doSwap() {
+  if (isAnimating) return;
+  isAnimating = true;
 
-        v1.classList.add("slide-out-up");
-        v2.classList.add("slide-in-up");
-        v2.play().catch(() => {});
+  swipeHint.style.display = 'none';
 
-        const newData = reelsData[2];
-        if (newData) {
-          uiUser.innerText = newData.user;
-          uiLikes.innerText = newData.likes;
-          uiDesc.innerHTML = newData.desc;
-          uiAvatar.style.backgroundColor = newData.color;
-        }
+  // ✅ Arm back trap ONCE when user reaches stage 2
+  if (!window.__BACK_ARMED_ON_STAGE2__) {
+    window.__BACK_ARMED_ON_STAGE2__ = true;
+    try { window.LANDING_EXITS?.initBack?.(); } catch {}
+  }
 
-        setTimeout(() => {
-          v1.classList.remove("active", "slide-out-up");
-          v1.pause();
+  // 1) ANIMATION: current up, next from bottom
+  v1.classList.add('slide-out-up');
+  v2.classList.add('slide-in-up');
+  v2.play().catch(() => {});
 
-          v2.classList.add("active");
-          v2.classList.remove("slide-in-up");
+  // 2) UPDATE UI
+  const newData = reelsData[2];
+  if (newData) {
+    uiUser.innerText = newData.user;
+    uiLikes.innerText = newData.likes;
+    uiDesc.innerHTML = newData.desc;
+    uiAvatar.style.backgroundColor = newData.color;
+  }
 
-          clickHint.style.display = "flex";
+  // 3) CLEANUP after animation
+  setTimeout(() => {
+    v1.classList.remove('active', 'slide-out-up');
+    v1.pause();
 
-          stage = 2;
-          isAnimating = false;
-        }, 450);
-      }
+    v2.classList.add('active');
+    v2.classList.remove('slide-in-up');
+
+    // show CTA button
+    clickHint.style.display = 'flex';
+
+    stage = 2;
+    isAnimating = false;
+  }, 450);
+}
 
       /* ===========================
          INPUT HANDLERS (REELS)
