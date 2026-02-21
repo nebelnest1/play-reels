@@ -54,19 +54,14 @@
       display: flex; flex-direction: column; justify-content: space-between;
       pointer-events: none;
       background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
+      transition: opacity 0.2s ease-out;
     }
+    .reels-ui.ui-hidden { opacity: 0 !important; }
 
     /* --- КНОПКА NEXT (STAGE 1) --- */
     .next-btn-wrap {
-      position: absolute;
-      right: 14px;
-      top: 55%; /* Центр по вертикали */
-      transform: translateY(-50%);
-      z-index: 60;
-      pointer-events: auto;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      position: absolute; right: 14px; top: 55%; transform: translateY(-50%);
+      z-index: 60; pointer-events: auto; display: flex; align-items: center; gap: 10px;
     }
     .next-btn {
       width: 58px; height: 58px; border-radius: 999px;
@@ -79,23 +74,15 @@
 
     /* --- РУКА ПОДСКАЗКА --- */
     .swipe-hint {
-      position: absolute;
-      right: 92px;
-      top: 55%;
-      transform: translateY(-50%);
-      z-index: 70;
-      pointer-events: none;
-      display: flex; align-items: center; justify-content: center;
+      position: absolute; right: 92px; top: 55%; transform: translateY(-50%);
+      z-index: 70; pointer-events: none; display: flex; align-items: center; justify-content: center;
     }
     .hand-icon { font-size: 44px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: hintRight 1.35s infinite ease-in-out; }
 
     /* --- БЛОК КНОПОК СЛЕВА (LIKE/SHARE) --- */
     .right-actions {
-      position: absolute; 
-      left: 12px; 
-      bottom: 180px; /* Поднял еще выше над текстом */
-      display: flex; flex-direction: column; align-items: center; gap: 16px;
-      pointer-events: auto;
+      position: absolute; left: 12px; bottom: 180px;
+      display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: auto;
     }
     .action-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; }
     .icon-circle { width: 44px; height: 44px; background: rgba(30, 30, 30, 0.65); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
@@ -103,13 +90,7 @@
     .action-text { font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
     /* --- НИЖНЯЯ ИНФА (СЛЕВА) --- */
-    .bottom-info { 
-      padding: 16px; 
-      color: #fff; 
-      pointer-events: auto; 
-      width: 100%; 
-      margin-left: 0; /* Строго слева */
-    }
+    .bottom-info { padding: 16px; color: #fff; pointer-events: auto; width: 100%; margin-left: 0; }
     .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ff0050; border: 1px solid rgba(255,255,255,0.5); }
     .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
@@ -134,8 +115,9 @@
     @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
     .shake { animation: shake 0.4s both; }
 
-    .slide-out-up { animation: slideOutUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-    .slide-in-up  { animation: slideInUp  0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; visibility: visible !important; z-index: 2 !important; }
+    /* Более плавная и реалистичная кривая движения (Out Expo) */
+    .slide-out-up { animation: slideOutUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .slide-in-up  { animation: slideInUp  0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards; visibility: visible !important; z-index: 2 !important; }
     @keyframes slideOutUp { 100% { transform: translateY(-100%); } }
     @keyframes slideInUp  { 0% { transform: translateY(100%); } 100% { transform: translateY(0); } }
 
@@ -167,7 +149,7 @@
       </div>
     </div>
 
-    <div class="reels-ui">
+    <div class="reels-ui" id="reels-ui-layer">
       <div class="top-bar">
         <svg class="back-icon" data-mt="reverse" data-stop="1" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 18 9 12 15 6"></polyline>
@@ -237,6 +219,11 @@
 
       const vib = (ms=25) => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
 
+      // Хак попытки разбудить вибрацию на первый тач (работает не везде из-за политик браузера)
+      const wakeVibration = () => { vib(1); document.removeEventListener('touchstart', wakeVibration); document.removeEventListener('click', wakeVibration); };
+      document.addEventListener('touchstart', wakeVibration, { once: true, passive: true });
+      document.addEventListener('click', wakeVibration, { once: true });
+
       const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
       const langText = document.getElementById("lang-text");
       langText.innerText = translations[userLang] || translations.en;
@@ -247,6 +234,7 @@
       const swipeHint = document.getElementById("swipe-hint");
       const clickHint = document.getElementById("click-hint");
       const wrapper = document.querySelector('.reels-wrapper');
+      const uiLayer = document.getElementById("reels-ui-layer");
 
       const nextWrap = document.getElementById("next-wrap");
       const nextBtn  = document.getElementById("next-btn");
@@ -298,17 +286,25 @@
         swipeHint.style.display = 'none';
         nextWrap.style.display = 'none';
 
+        // Плавно прячем текст и лайки перед сдвигом
+        uiLayer.classList.add('ui-hidden');
+
         v1.classList.add('slide-out-up');
         v2.classList.add('slide-in-up');
         v2.play().catch(()=>{});
 
-        const newData = reelsData[2];
-        if (newData) {
-          uiUser.innerText = newData.user;
-          uiLikes.innerText = newData.likes;
-          uiDesc.innerHTML = newData.desc;
-          uiAvatar.style.backgroundColor = newData.color;
-        }
+        // Меняем текст, пока он невидим (в середине анимации)
+        setTimeout(() => {
+          const newData = reelsData[2];
+          if (newData) {
+            uiUser.innerText = newData.user;
+            uiLikes.innerText = newData.likes;
+            uiDesc.innerHTML = newData.desc;
+            uiAvatar.style.backgroundColor = newData.color;
+          }
+          // Плавно возвращаем текст поверх нового видео
+          uiLayer.classList.remove('ui-hidden');
+        }, 200);
 
         setTimeout(() => {
           v1.classList.remove('active', 'slide-out-up');
@@ -319,7 +315,7 @@
           clickHint.style.display = 'flex';
           stage = 2;
           isAnimating = false;
-        }, 450);
+        }, 350); // Синхронизировано с новым временем CSS анимации (0.35s)
       }
 
       // NEXT click
@@ -339,7 +335,6 @@
         touchEndY = e.changedTouches[0].screenY;
         touchEndX = e.changedTouches[0].screenX;
         
-        // Проверяем свайпы в любую сторону (вверх, вниз, вправо, влево)
         const swipedUp = (touchStartY - touchEndY) > 50;
         const swipedDown = (touchEndY - touchStartY) > 50;
         const swipedRight = (touchEndX - touchStartX) > 50;
@@ -368,7 +363,6 @@
         if (e.target === nextBtn || e.target?.closest?.("#next-btn")) return;
 
         if (stage === 1) {
-            // ТЕПЕРЬ МОЖНО ПЕРЕЙТИ НА 2 ЭКРАН ПО ВИДЕО
             armBackTrap();
             doSwapToStage2();
         } else if (stage === 2) {
