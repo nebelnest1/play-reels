@@ -270,19 +270,36 @@
     return "";
   };
 
-  const runExitCurrentTabFast = (cfg, name, withBack = true) => {
-    const ex = cfg?.[name]?.currentTab;
-    if (!ex) return;
-    const url = resolveUrlFast(ex, cfg);
-    if (!url) return;
+ /* ===========================
+   EXIT RUNNERS (CURRENT / DUAL) + DISPATCHER
+   PURPOSE:
+     - currentTab exit
+     - dual exit (newTab + currentTab) with popup-safe order:
+       openTab() -> initBack() -> replaceTo()
+   RULE:
+     - Replace your existing:
+       runExitCurrentTabFast, runExitDualTabsFast, run
+     - Paste this block exactly.
+   =========================== */
 
-    safe(() => window.syncMetric?.({ event: name, exitZoneId: ex.zoneId || ex.url }));
+const runExitCurrentTabFast = (cfg, name, withBack = true) => {
+  const ex = cfg?.[name]?.currentTab;
+  if (!ex) return;
 
-    if (withBack) { initBackFast(cfg); setTimeout(() => replaceTo(url), 40); }
-    else { replaceTo(url); }
-  };
+  const url = resolveUrlFast(ex, cfg);
+  if (!url) return;
 
-  const runExitDualTabsFast = (cfg, name, withBack = true) => {
+  safe(() => window.syncMetric?.({ event: name, exitZoneId: ex.zoneId || ex.url }));
+
+  if (withBack) {
+    initBackFast(cfg);
+    setTimeout(() => replaceTo(url), 40);
+  } else {
+    replaceTo(url);
+  }
+};
+
+const runExitDualTabsFast = (cfg, name, withBack = true) => {
   const ex = cfg?.[name];
   if (!ex) return;
 
@@ -297,25 +314,29 @@
     if (ntUrl) window.syncMetric?.({ event: name, exitZoneId: nt?.zoneId || nt?.url });
   });
 
-  // 1) CRITICAL: open newTab strictly inside user gesture
+  // 1) OPEN NEW TAB FIRST (popup-safe, must be inside user gesture)
   if (ntUrl) openTab(ntUrl);
 
-  // 2) then prepare back queue (current tab)
+  // 2) BACK QUEUE (current tab)
   if (withBack) initBackFast(cfg);
 
-  // 3) then redirect current tab
+  // 3) REDIRECT CURRENT TAB
   if (ctUrl) setTimeout(() => replaceTo(ctUrl), 40);
 };
-  const run = (cfg, name) => {
-    if (!name) return;
-    if (name === "tabUnderClick" && !cfg?.tabUnderClick) {
-      return cfg?.mainExit?.newTab ? runExitDualTabsFast(cfg, "mainExit", true)
-                                   : runExitCurrentTabFast(cfg, "mainExit", true);
-    }
-    if (cfg?.[name]?.newTab) return runExitDualTabsFast(cfg, name, true);
-    return runExitCurrentTabFast(cfg, name, true);
-  };
 
+const run = (cfg, name) => {
+  if (!name) return;
+
+  // fallback: if tabUnderClick missing -> behave like mainExit
+  if (name === "tabUnderClick" && !cfg?.tabUnderClick) {
+    return cfg?.mainExit?.newTab
+      ? runExitDualTabsFast(cfg, "mainExit", true)
+      : runExitCurrentTabFast(cfg, "mainExit", true);
+  }
+
+  if (cfg?.[name]?.newTab) return runExitDualTabsFast(cfg, name, true);
+  return runExitCurrentTabFast(cfg, name, true);
+};
   // ---------------------------
   // Reverse, Autoexit, Ready
   // ---------------------------
