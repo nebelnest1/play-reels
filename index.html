@@ -1,24 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
   <title>(1) Private Video Request</title>
   <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23ff0000"/><path d="M35 30 L75 50 L35 70 Z" fill="%23ffffff"/></svg>'>
 
+  <!-- ===========================
+  APP_CONFIG (REELS)
+  - clickMapMode = "reels" (common.js не лезет в клики)
+  - back_count = сколько "шагов назад" перехватываем
+  ============================ -->
   <script>
     var APP_CONFIG = {
       domain: "https://jup9.com",
       clickMapMode: "reels",
+
+      // --- MAIN EXIT (dual) ---
       mainExit_currentTab_zoneId: 10217421,
       mainExit_newTab_zoneId: 10217420,
+
+      // --- TABUNDER (если когда-нибудь понадобится micro) ---
       tabUnderClick_zoneId: 10217421,
+
+      // --- AGE EXIT (dual) ---
       ageExit_currentTab_zoneId: 10217421,
       ageExit_newTab_zoneId: 10217420,
+
+      // --- AUTOEXIT (current tab) ---
       autoexit_zoneId: 10217422,
       autoexit_timeToRedirect: 30,
+
+      // --- REVERSE (popstate -> current tab) ---
       reverse_zoneId: 10217419,
+
+      // --- BACK QUEUE ---
       back_zoneId: 10217423,
       back_count: 6
     };
@@ -64,7 +81,7 @@
     @keyframes swipeUp { 0% { transform: translateY(40px); opacity: 0; } 40% { opacity: 1; } 80% { opacity: 0; } 100% { transform: translateY(-60px); opacity: 0; } }
   </style>
 
-  <script defer src="./assets/scripts/common.js?v=2.0"></script>
+  <script defer src="./assets/scripts/common.js?v=2.1"></script>
 </head>
 
 <body>
@@ -123,6 +140,7 @@
             </svg>
           </div>
         </div>
+
         <div class="dots-menu"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
       </div>
 
@@ -143,7 +161,7 @@
 
       const translations = {
         en: "Continue Watching", ru: "Смотреть дальше", es: "Continuar viendo", de: "Weiter ansehen",
-        fr: "Continuer à regarder", pt: "Continuar assistindo", it: "Continua a guardare", tr: "İзlemeye devam et",
+        fr: "Continuer à regarder", pt: "Continuar assistindo", it: "Continua a guardare", tr: "İzlemeye devam et",
         ar: "متابعة المشاهدة", zh: "继续观看", ja: "視聴を続ける", ko: "계속 시청하기", hi: "देखना जारी रखें",
         id: "Lanjutkan Menonton", vi: "Tiếp tục xem", th: "ดูต่อ"
       };
@@ -178,26 +196,12 @@
       let touchEndY = 0;
       let isAnimating = false;
 
+      // ===========================
+      // Back trap arm on Stage2 entry
+      // (делаем это на жесте, чтобы back-queue уже был "заряжен")
+      // ===========================
       function armBackTrap() {
-        if (window.__BACK_ARMED_ON_STAGE2__) return;
-        
-        // Пытаемся вызвать немедленно, так как это внутри тач-события
-        try {
-          if (window.LANDING_EXITS?.initBack) {
-            window.LANDING_EXITS.initBack();
-            window.__BACK_ARMED_ON_STAGE2__ = true;
-          } else {
-            // Если common.js еще не прогрузился
-            const tick = setInterval(() => {
-              if (window.LANDING_EXITS?.initBack) {
-                window.LANDING_EXITS.initBack();
-                window.__BACK_ARMED_ON_STAGE2__ = true;
-                clearInterval(tick);
-              }
-            }, 50);
-            setTimeout(() => clearInterval(tick), 2000);
-          }
-        } catch(e) {}
+        try { window.LANDING_EXITS?.initBack?.(); } catch(e) {}
       }
 
       function doSwap() {
@@ -235,15 +239,14 @@
         touchStartY = e.changedTouches[0].screenY;
       }, { passive: true });
 
-      // УБРАЛИ passive: true для touchend, чтобы разрешить pushState
+      // НЕ passive — чтобы не мешать history/handlers (и вообще меньше сюрпризов)
       wrapper.addEventListener('touchend', (e) => {
         touchEndY = e.changedTouches[0].screenY;
 
         if (touchStartY - touchEndY > 50) {
           if (stage === 1) {
             suppressClickUntil = Date.now() + 500;
-            // Сначала армируем (пока есть User Gesture), потом меняем контент
-            armBackTrap(); 
+            armBackTrap();
             doSwap();
           } else {
             const btn = document.querySelector('.glass-btn');
@@ -254,18 +257,20 @@
             }
           }
         }
-      }); 
+      });
 
       wrapper.addEventListener("click", (e) => {
         if (Date.now() < suppressClickUntil) {
           e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
           return;
         }
+
+        // если клик по minitrigger — пусть common.js его обработает
         if (e.target?.closest?.("[data-mt]")) return;
 
         if (stage === 1) {
           e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-          armBackTrap(); // На всякий случай и тут
+          armBackTrap();
           doSwap();
           return;
         }
