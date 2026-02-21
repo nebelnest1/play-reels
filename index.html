@@ -39,7 +39,9 @@
  <style>
     * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; background: #000; }
+    
+    /* Блокируем системный свайп, оставляем только клики */
+    .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; background: #000; touch-action: none; }
 
     /* --- ВИДЕО СЛОИ --- */
     .video-layer {
@@ -56,7 +58,7 @@
       background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
     }
 
-    /* --- КНОПКА NEXT (STAGE 1) --- */
+    /* --- КНОПКА NEXT (STAGE 1 И STAGE 2) --- */
     .next-btn-wrap {
       position: absolute; right: 14px; top: 55%; transform: translateY(-50%);
       z-index: 60; pointer-events: auto; display: flex; align-items: center; gap: 10px;
@@ -79,8 +81,7 @@
 
     /* --- БЛОК КНОПОК СЛЕВА (LIKE/SHARE) --- */
     .right-actions {
-      position: absolute; left: 12px; bottom: 180px;
-      display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: auto;
+      position: absolute; left: 12px; bottom: 180px; display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: auto;
     }
     .action-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; }
     .icon-circle { width: 44px; height: 44px; background: rgba(30, 30, 30, 0.65); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
@@ -94,10 +95,10 @@
     .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
     .desc { font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
-    /* --- STAGE 2 КНОПКА (GLASS) --- */
+    /* --- STAGE 2 КНОПКА (ОБЕРТКА) --- */
     .click-hint-overlay {
-      position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%);
-      z-index: 50; display: none; flex-direction: column; align-items: center; width: 100%;
+      position: absolute; right: 14px; top: 55%; transform: translateY(-50%);
+      z-index: 50; display: none; align-items: center; justify-content: center; pointer-events: auto;
     }
     .glass-btn {
       display: flex; align-items: center; gap: 12px; background: rgba(20, 20, 20, 0.45);
@@ -106,24 +107,18 @@
     }
     .glass-text { color: #fff; font-size: 16px; font-weight: 600; text-transform: uppercase; }
 
-    /* --- АНИМАЦИИ ИЗ СТАРОГО КОДА --- */
+    /* --- АНИМАЦИИ --- */
     @keyframes pulseNext { 0%, 100% { transform: scale(1); } 70% { transform: scale(1.06); } }
     @keyframes pulseGlass { 0% { transform: scale(1); } 70% { transform: scale(1.05); } 100% { transform: scale(1); } }
     @keyframes hintRight { 0% { transform: translateX(-14px); opacity: 0; } 35% { opacity: 1; } 70% { transform: translateX(10px); opacity: 1; } 100% { transform: translateX(10px); opacity: 0; } }
-    
-    .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-    @keyframes shake {
-      10%, 90% { transform: translate3d(-2px, 0, 0); }
-      20%, 80% { transform: translate3d(4px, 0, 0); }
-      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-      40%, 60% { transform: translate3d(6px, 0, 0); }
-    }
+    @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
+    .shake { animation: shake 0.4s both; }
 
-    /* РЕШЕНИЕ ИЗ ТВОЕГО СТАРОГО ЛЕНДА: opacity 1 и cubic-bezier 0.25, 1, 0.5, 1 */
+    /* Переходы из старого ленда (opacity 1) */
     .slide-out-up { animation: slideOutUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-    .slide-in-up { animation: slideInUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; visibility: visible !important; z-index: 2 !important; }
+    .slide-in-up  { animation: slideInUp  0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; visibility: visible !important; z-index: 2 !important; }
     @keyframes slideOutUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 1; } }
-    @keyframes slideInUp { 0% { transform: translateY(100%); opacity: 1; } 100% { transform: translateY(0); opacity: 1; } }
+    @keyframes slideInUp  { 0% { transform: translateY(100%); opacity: 1; } 100% { transform: translateY(0); opacity: 1; } }
 
     .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
     .back-icon { width: 24px; height: 24px; }
@@ -147,13 +142,16 @@
     </div>
 
     <div id="click-hint" class="click-hint-overlay">
-      <div class="glass-btn" data-mt="mainExit" data-stop="1">
+      <div class="glass-btn" data-mt="mainExit" data-stop="1" style="display: none;">
         <svg class="glass-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
         <span class="glass-text" id="lang-text">Continue Watching</span>
       </div>
+      <div class="next-btn" id="next-btn-s2" data-mt="mainExit" data-stop="1">
+        <svg class="next-icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
     </div>
 
-    <div class="reels-ui" id="reels-ui-layer">
+    <div class="reels-ui">
       <div class="top-bar">
         <svg class="back-icon" data-mt="reverse" data-stop="1" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 18 9 12 15 6"></polyline>
@@ -214,6 +212,7 @@
         { user: "@Naughty_Kate", likes: "12.4k", desc: "Wait for the end... 💦 <br>Link in bio!", color: "#0095f6" }
       ];
 
+      // ВЕРНУЛ ВСЕ ПЕРЕВОДЫ НА МЕСТО
       const translations = {
         en: "Continue Watching", ru: "Смотреть дальше", es: "Continuar viendo", de: "Weiter ansehen",
         fr: "Continuer à regarder", pt: "Continuar assistindo", it: "Continua a guardare", tr: "İzlemeye devam et",
@@ -222,11 +221,6 @@
       };
 
       const vib = (ms=25) => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
-
-      // Хак попытки разбудить вибрацию на первый тач
-      const wakeVibration = () => { vib(1); document.removeEventListener('touchstart', wakeVibration); document.removeEventListener('click', wakeVibration); };
-      document.addEventListener('touchstart', wakeVibration, { once: true, passive: true });
-      document.addEventListener('click', wakeVibration, { once: true });
 
       const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
       const langText = document.getElementById("lang-text");
@@ -241,6 +235,7 @@
 
       const nextWrap = document.getElementById("next-wrap");
       const nextBtn  = document.getElementById("next-btn");
+      const nextBtnS2 = document.getElementById("next-btn-s2"); // Новая кнопка на Stage 2
 
       const uiUser = document.getElementById('ui-username');
       const uiLikes = document.getElementById('ui-likes');
@@ -289,7 +284,7 @@
         swipeHint.style.display = 'none';
         nextWrap.style.display = 'none';
 
-        // Текст меняется моментально, как в старом лендинге
+        // Текст меняется моментально
         const newData = reelsData[2];
         if (newData) {
           uiUser.innerText = newData.user;
@@ -298,7 +293,6 @@
           uiAvatar.style.backgroundColor = newData.color;
         }
 
-        // РЕШЕНИЕ ИЗ СТАРОГО КОДА: v2.play() идет ДО навешивания классов
         v2.play().catch(()=>{});
         v1.classList.add('slide-out-up');
         v2.classList.add('slide-in-up');
@@ -309,20 +303,20 @@
           v2.classList.add('active');
           v2.classList.remove('slide-in-up');
 
-          clickHint.style.display = 'flex';
+          clickHint.style.display = 'flex'; // Показываем обертку со второй стрелочкой
           stage = 2;
           isAnimating = false;
-        }, 450); // Тайминг из старого кода (0.45s)
+        }, 450);
       }
 
-      // NEXT click
+      // NEXT click (Первая кнопка)
       nextBtn.addEventListener("click", (e) => {
         e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
         armBackTrap();
         doSwapToStage2();
       }, true);
 
-      // TOUCH LOGIC: Shake and Vibrate + X/Y tracking
+      // TOUCH LOGIC: Shake and Vibrate + X/Y tracking (БЕЗ ПЕРЕХОДА)
       wrapper.addEventListener('touchstart', (e) => {
         touchStartY = e.changedTouches[0].screenY;
         touchStartX = e.changedTouches[0].screenX;
@@ -332,29 +326,21 @@
         touchEndY = e.changedTouches[0].screenY;
         touchEndX = e.changedTouches[0].screenX;
         
-        const swipedUp = (touchStartY - touchEndY) > 50;
-        const swipedDown = (touchEndY - touchStartY) > 50;
-        const swipedRight = (touchEndX - touchStartX) > 50;
-        const swipedLeft = (touchStartX - touchEndX) > 50;
+        const swipedY = Math.abs(touchStartY - touchEndY) > 50;
+        const swipedX = Math.abs(touchStartX - touchEndX) > 50;
 
-        if (swipedUp || swipedDown || swipedRight || swipedLeft) {
-          vib(40); // ВИБРАЦИЯ при свайпе
-          if (stage === 1 && nextBtn) {
-            nextBtn.classList.remove('shake');
-            void nextBtn.offsetWidth;
-            nextBtn.classList.add('shake');
-          } else if (stage === 2) {
-            const btn = document.querySelector('.glass-btn');
-            if (btn) {
-              btn.classList.remove('shake');
-              void btn.offsetWidth;
-              btn.classList.add('shake');
-            }
+        if (swipedY || swipedX) {
+          vib(40); // ВИБРАЦИЯ при попытке свайпа
+          const currentBtn = (stage === 1) ? nextBtn : nextBtnS2;
+          if (currentBtn) {
+            currentBtn.classList.remove('shake');
+            void currentBtn.offsetWidth;
+            currentBtn.classList.add('shake');
           }
         }
       }, { passive: true });
 
-      // Background clicks
+      // Background clicks (Переход ТОЛЬКО по клику)
       wrapper.addEventListener("click", (e) => {
         if (e.target?.closest?.("[data-mt]")) return; 
         if (e.target === nextBtn || e.target?.closest?.("#next-btn")) return;
@@ -364,6 +350,7 @@
             doSwapToStage2();
         } else if (stage === 2) {
           e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          vib(30);
           window.LANDING_EXITS?.run?.("mainExit");
         }
       }, true);
