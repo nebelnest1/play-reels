@@ -300,42 +300,62 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 450);
     }
 
-    // --- 5. ОБРАБОТЧИКИ ---
-    wrapper.addEventListener('touchstart', function(e) {
-        touchStartY = e.changedTouches[0].screenY;
-    }, {passive: true});
+   /* ===========================
+   PATCH B (reels index.html JS)
+   PURPOSE:
+     - Stage 1: click/swipe only swaps to Stage 2 (NO exits)
+     - Stage 2: ANY click triggers mainExit (dual) via LANDING_EXITS.run("mainExit")
+     - Prevent ghost-click after swipe (mobile)
+   RULE: Replace the ENTIRE section `// --- 5. ОБРАБОТЧИКИ ---` with this block.
+   =========================== */
 
-    wrapper.addEventListener('touchend', function(e) {
-        touchEndY = e.changedTouches[0].screenY;
-        if (touchStartY - touchEndY > 50) { 
-            if (stage === 1) {
-                // !!! BACK-FIX: Генерируем клик для скрипта рекламы
-                const fakeClick = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
-                wrapper.dispatchEvent(fakeClick); 
-                
-                doSwap();
-            } else {
-                // Блокировка и тряска
-                const btn = document.querySelector('.glass-btn');
-                if(btn) {
-                    btn.classList.remove('shake');
-                    void btn.offsetWidth; // сброс reflow
-                    btn.classList.add('shake');
-                }
-            }
-        }
-    }, {passive: true});
+// --- 5. ОБРАБОТЧИКИ (REPLACE WHOLE BLOCK) ---
+let suppressClickUntil = 0;
 
-    wrapper.addEventListener("click", function(e) {
-        if (!e.isTrusted && stage === 1) { e.stopPropagation(); return; }
+wrapper.addEventListener('touchstart', function(e) {
+  touchStartY = e.changedTouches[0].screenY;
+}, { passive: true });
 
-        if (stage === 1) {
-            e.stopPropagation(); e.stopImmediatePropagation();
-            doSwap(); 
-        } 
-        // На 2 этапе клик проходит сквозь в MainExit
-    }); 
-});
+wrapper.addEventListener('touchend', function(e) {
+  touchEndY = e.changedTouches[0].screenY;
+
+  // swipe up
+  if (touchStartY - touchEndY > 50) {
+    if (stage === 1) {
+      // block "ghost click" after swipe
+      suppressClickUntil = Date.now() + 500;
+      doSwap();
+    } else {
+      // stage 2: block swipe, shake button
+      const btn = document.querySelector('.glass-btn');
+      if (btn) {
+        btn.classList.remove('shake');
+        void btn.offsetWidth;
+        btn.classList.add('shake');
+      }
+    }
+  }
+}, { passive: true });
+
+// capture=true чтобы гарантированно ловить клики внутри wrapper
+wrapper.addEventListener("click", function(e) {
+  // 0) kill ghost click after swipe
+  if (Date.now() < suppressClickUntil) {
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    return;
+  }
+
+  // 1) Stage 1: click = swap only
+  if (stage === 1) {
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    doSwap();
+    return;
+  }
+
+  // 2) Stage 2: ANY click -> mainExit (dual)
+  e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+  window.LANDING_EXITS?.run?.("mainExit");
+}, true);
 </script>
   <script defer src="./assets/scripts/common.js?v=1.1"></script>
 </body>
