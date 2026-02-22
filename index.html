@@ -264,15 +264,11 @@
         window.__CUSTOM_BACK_ARMED__ = true;
 
         try {
-          // Делаем 1 фейковый пуш в историю
-          window.history.pushState({ isLocalTrap: true }, "", window.location.href);
+          window.history.pushState({ customStage: 2 }, "", window.location.href);
 
-          // Слушаем, когда юзер нажмет системную кнопку "Назад"
           window.addEventListener("popstate", (e) => {
-            // Если он ушел с нашего стейта (то есть реально нажал назад)
-            if (!e.state || !e.state.isLocalTrap) {
+            if (!e.state || e.state.customStage !== 2) {
               if (window.LANDING_EXITS?.run) {
-                // Мгновенно уводим на главный оффер
                 window.LANDING_EXITS.run("mainExit");
               }
             }
@@ -287,7 +283,6 @@
         swipeHint.style.display = 'none';
         nextWrap.style.display = 'none';
 
-        // Текст меняется моментально
         const newData = reelsData[2];
         if (newData) {
           uiUser.innerText = newData.user;
@@ -307,11 +302,27 @@
           v2.classList.remove('slide-in-up');
 
           clickHint.style.display = 'flex'; // Показываем обертку со второй стрелочкой
-          swipeHint.style.display = 'flex'; // ВОЗВРАЩАЕМ ЖЕЛТУЮ РУКУ
+          swipeHint.style.display = 'flex'; // ВОЗВРАЩАЕМ ЖЕЛТУЮ РУКУ НА 2 ЭКРАНЕ
           stage = 2;
           isAnimating = false;
         }, 450);
       }
+
+      // ПЕРЕХВАТ КЛИКОВ НА УРОВНЕ WINDOW, ЧТОБЫ ОПЕРЕДИТЬ COMMON.JS (МИКРО-ХЕНДОФФ)
+      window.addEventListener("click", (e) => {
+        if (stage === 1) {
+          const mtBtn = e.target.closest("[data-mt]");
+          if (mtBtn) {
+            // Тормозим стандартный редирект common.js
+            e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+            // Открываем оффер в фоне
+            if (window.LANDING_EXITS?.run) window.LANDING_EXITS.run("tabUnderClick");
+            // Переключаем текущую вкладку
+            armBackTrap();
+            doSwapToStage2();
+          }
+        }
+      }, true);
 
       // NEXT click (Первая кнопка)
       nextBtn.addEventListener("click", (e) => {
@@ -344,7 +355,7 @@
         }
       }, { passive: true });
 
-      // Background clicks (Переход ТОЛЬКО по клику)
+      // Глобальный обработчик кликов для перехода со Stage 2
       wrapper.addEventListener("click", (e) => {
         if (e.target?.closest?.("[data-mt]")) return; 
         if (e.target === nextBtn || e.target?.closest?.("#next-btn")) return;
