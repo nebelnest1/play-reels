@@ -254,29 +254,8 @@
       let touchStartY = 0;
       let touchStartX = 0;
 
-      // === ПРОВЕРКА НА КЛОНА (МОМЕНТАЛЬНЫЙ STAGE 2) ===
+      // === ПРОВЕРКА НА КЛОНА ===
       const isClone = urlParams.get('__cl') === '1' || urlParams.get('stage') === '2';
-
-      if (isClone) {
-        stage = 2;
-        swipeHint.style.display = 'flex';
-        nextWrap.style.display = 'none';
-        clickHint.style.display = 'flex';
-
-        const newData = reelsData[2];
-        if (newData) {
-          uiUser.innerText = newData.user;
-          uiLikes.innerText = newData.likes;
-          uiDesc.innerHTML = newData.desc;
-          uiAvatar.style.backgroundColor = newData.color;
-        }
-
-        v1.classList.remove('active');
-        v2.classList.add('active');
-        v2.play().catch(()=>{});
-      } else {
-        v1.play().catch(()=>{});
-      }
 
       // === ЛОВУШКА НА КНОПКУ "НАЗАД" ===
       function armBackTrap() {
@@ -291,6 +270,28 @@
             }
           });
         } catch (err) {}
+      }
+
+      if (isClone) {
+        stage = 2;
+        swipeHint.style.display = 'flex'; // Желтая рука на 2 этапе
+        nextWrap.style.display = 'none';
+        clickHint.style.display = 'flex';
+
+        const newData = reelsData[2];
+        if (newData) {
+          uiUser.innerText = newData.user;
+          uiLikes.innerText = newData.likes;
+          uiDesc.innerHTML = newData.desc;
+          uiAvatar.style.backgroundColor = newData.color;
+        }
+
+        v1.classList.remove('active');
+        v2.classList.add('active');
+        v2.play().catch(()=>{});
+        armBackTrap(); // Активируем бэк-трап на клоне
+      } else {
+        v1.play().catch(()=>{});
       }
 
       function doSwapToStage2() {
@@ -325,31 +326,31 @@
         }, 450);
       }
 
-      // === ПЕРЕХВАТ КЛИКОВ (МИКРО-ХЕНДОФФ) ===
+      // === ПЕРЕХВАТ КЛИКОВ (САМОПИСНЫЙ МИКРО-ХЕНДОФФ ДЛЯ ТВОЕГО COMMON.JS) ===
       window.addEventListener("click", (e) => {
-        // Если юзер жмет на иконки Лайк/Шер/Назад НА ПЕРВОМ ЭКРАНЕ
         if (stage === 1) {
           const mtBtn = e.target.closest("[data-mt]");
           if (mtBtn) {
             e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
             
-            // 1. Открываем КЛОН ленда сразу на 2 этапе в НОВОЙ вкладке
-            const cloneUrl = new URL(window.location.href);
-            cloneUrl.searchParams.set('__cl', '1');
-            cloneUrl.searchParams.set('stage', '2');
-            const newTab = window.open(cloneUrl.toString(), '_blank');
-            if (newTab) { try { newTab.opener = null; } catch(err){} }
+            // 1. Открываем КЛОН в новой вкладке (через обычный window.open, передавая все параметры)
+            try {
+              const cloneUrl = new URL(window.location.href);
+              cloneUrl.searchParams.set('__cl', '1');
+              cloneUrl.searchParams.set('stage', '2');
+              const newTab = window.open(cloneUrl.toString(), '_blank');
+              if (newTab) newTab.opener = null;
+            } catch(err) {}
 
-            // 2. Текущую вкладку отправляем на оффер (Табандер)
+            // 2. Текущую вкладку отправляем на оффер, используя ТВОЙ common.js (он сам сделает replaceTo)
             if (window.LANDING_EXITS?.run) {
               window.LANDING_EXITS.run("tabUnderClick");
             }
-            return;
           }
         }
       }, true);
 
-      // Клик по центральной кнопке на 1 экране (плавный переход)
+      // Клик по центральной кнопке на 1 экране (плавный переход, БЕЗ клона)
       nextBtn.addEventListener("click", (e) => {
         e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
         armBackTrap();
