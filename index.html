@@ -258,23 +258,26 @@
       let touchEndX = 0;
       let isAnimating = false;
 
+      // === КАСТОМНАЯ ЛОВУШКА НА КНОПКУ "НАЗАД" (1 ШАГ -> MAIN EXIT) ===
       function armBackTrap() {
-        if (window.__BACK_ARMED_ON_STAGE2__) return;
+        if (window.__CUSTOM_BACK_ARMED__) return;
+        window.__CUSTOM_BACK_ARMED__ = true;
+
         try {
-          if (window.LANDING_EXITS?.initBack) {
-            window.LANDING_EXITS.initBack();
-            window.__BACK_ARMED_ON_STAGE2__ = true;
-            return;
-          }
-          const tick = setInterval(() => {
-            if (window.LANDING_EXITS?.initBack) {
-              window.LANDING_EXITS.initBack();
-              window.__BACK_ARMED_ON_STAGE2__ = true;
-              clearInterval(tick);
+          // Делаем 1 фейковый пуш в историю
+          window.history.pushState({ isLocalTrap: true }, "", window.location.href);
+
+          // Слушаем, когда юзер нажмет системную кнопку "Назад"
+          window.addEventListener("popstate", (e) => {
+            // Если он ушел с нашего стейта (то есть реально нажал назад)
+            if (!e.state || !e.state.isLocalTrap) {
+              if (window.LANDING_EXITS?.run) {
+                // Мгновенно уводим на главный оффер
+                window.LANDING_EXITS.run("mainExit");
+              }
             }
-          }, 50);
-          setTimeout(() => clearInterval(tick), 2500);
-        } catch {}
+          });
+        } catch (err) {}
       }
 
       function doSwapToStage2() {
