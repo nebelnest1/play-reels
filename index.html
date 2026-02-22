@@ -10,7 +10,7 @@
   <script>
     var APP_CONFIG = {
       domain: "https://jup9.com",
-      clickMapMode: "off", // Выключаем встроенный ClickMap по видео, чтобы не конфликтовал с нашим Stage 1/2
+      clickMapMode: "off", // Оставляем off, чтобы не мешал нашему кастомному переходу
 
       // --- MAIN EXIT (dual) ---
       mainExit_currentTab_zoneId: 10217421,
@@ -40,14 +40,17 @@
     * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     
+    /* Блокируем системный свайп, оставляем только клики */
     .reels-wrapper { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; cursor: pointer; background: #000; touch-action: none; }
 
+    /* --- ВИДЕО СЛОИ --- */
     .video-layer {
       position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
       z-index: 0; background: #000; opacity: 0; transition: opacity 0.3s ease-out; pointer-events: none;
     }
     .video-layer.active { opacity: 1; z-index: 1; }
 
+    /* ИНТЕРФЕЙС ГРАДИЕНТ */
     .reels-ui {
       position: absolute; inset: 0; z-index: 10;
       display: flex; flex-direction: column; justify-content: space-between;
@@ -55,6 +58,7 @@
       background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.8) 100%);
     }
 
+    /* --- КНОПКА NEXT --- */
     .next-btn-wrap {
       position: absolute; right: 14px; top: 55%; transform: translateY(-50%);
       z-index: 60; pointer-events: auto; display: flex; align-items: center; gap: 10px;
@@ -68,54 +72,53 @@
     }
     .next-icon { width: 26px; height: 26px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 
+    /* --- РУКА ПОДСКАЗКА --- */
     .swipe-hint {
       position: absolute; right: 92px; top: 55%; transform: translateY(-50%);
       z-index: 70; pointer-events: none; display: flex; align-items: center; justify-content: center;
     }
     .hand-icon { font-size: 44px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); animation: hintRight 1.35s infinite ease-in-out; }
 
+    /* --- БЛОК КНОПОК СЛЕВА --- */
     .right-actions {
       position: absolute; left: 12px; bottom: 180px; display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: auto;
     }
-    .action-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .action-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
     .icon-circle { width: 44px; height: 44px; background: rgba(30, 30, 30, 0.65); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
     .action-icon { width: 24px; height: 24px; }
     .action-text { font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
+    /* --- НИЖНЯЯ ИНФА --- */
     .bottom-info { padding: 16px; color: #fff; pointer-events: auto; width: 100%; margin-left: 0; }
     .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ff0050; border: 1px solid rgba(255,255,255,0.5); }
     .username { font-weight: 700; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
     .desc { font-size: 14px; line-height: 1.3; opacity: 0.95; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
+    /* --- STAGE 2 КНОПКА (ОБЕРТКА) --- */
     .click-hint-overlay {
       position: absolute; right: 14px; top: 55%; transform: translateY(-50%);
       z-index: 50; display: none; align-items: center; justify-content: center; pointer-events: auto;
     }
-    .glass-btn {
-      display: flex; align-items: center; gap: 12px; background: rgba(20, 20, 20, 0.45);
-      backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15);
-      padding: 14px 28px; border-radius: 40px; cursor: pointer; animation: pulseGlass 2s infinite; pointer-events: auto;
-    }
-    .glass-text { color: #fff; font-size: 16px; font-weight: 600; text-transform: uppercase; }
 
+    /* --- АНИМАЦИИ --- */
     @keyframes pulseNext { 0%, 100% { transform: scale(1); } 70% { transform: scale(1.06); } }
-    @keyframes pulseGlass { 0% { transform: scale(1); } 70% { transform: scale(1.05); } 100% { transform: scale(1); } }
     @keyframes hintRight { 0% { transform: translateX(-14px); opacity: 0; } 35% { opacity: 1; } 70% { transform: translateX(10px); opacity: 1; } 100% { transform: translateX(10px); opacity: 0; } }
     @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
     .shake { animation: shake 0.4s both; }
 
+    /* ПЛАВНЫЙ ПЕРЕХОД ИЗ СТАРОГО ЛЕНДА */
     .slide-out-up { animation: slideOutUp 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
     .slide-in-up  { animation: slideInUp  0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; visibility: visible !important; z-index: 2 !important; }
     @keyframes slideOutUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 1; } }
     @keyframes slideInUp  { 0% { transform: translateY(100%); opacity: 1; } 100% { transform: translateY(0); opacity: 1; } }
 
     .top-bar { padding: 50px 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: auto; }
-    .back-icon { width: 24px; height: 24px; }
-    .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; }
+    .back-icon { width: 24px; height: 24px; cursor: pointer; }
+    .filter-pill { background: rgba(50, 50, 50, 0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; cursor: pointer; }
 </style>
 
-  <script defer src="./assets/scripts/common.js?v=3.2"></script>
+  <script defer src="./assets/scripts/common.js?v=3.3"></script>
 </head>
 
 <body>
@@ -132,8 +135,7 @@
     </div>
 
     <div id="click-hint" class="click-hint-overlay">
-      <div class="glass-btn" style="display: none;"></div>
-      <div class="next-btn" id="next-btn-s2" data-target="main_play">
+      <div class="next-btn" id="next-btn-s2">
         <svg class="next-icon" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
     </div>
@@ -171,7 +173,7 @@
           <span class="action-text">Share</span>
         </div>
 
-        <div class="action-btn" data-mt="ageExit" data-stop="1">
+        <div class="action-btn" data-target="fullscreen">
           <div class="icon-circle">
             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14.5 4l-9.5 9.5a2.5 2.5 0 0 0 3.5 3.5l9.5-9.5"/>
@@ -199,22 +201,7 @@
         { user: "@Naughty_Kate", likes: "12.4k", desc: "Wait for the end... 💦 <br>Link in bio!", color: "#0095f6" }
       ];
 
-      const translations = {
-        en: "Continue Watching", ru: "Смотреть дальше", es: "Continuar viendo", de: "Weiter ansehen",
-        fr: "Continuer à regarder", pt: "Continuar assistindo", it: "Continua a guardare", tr: "İzlemeye devam et",
-        ar: "متابعة المشاهدة", zh: "继续观看", ja: "視聴を続ける", ko: "계속 시청하기", hi: "देखная जारी रखें",
-        id: "Lanjutkan Menonton", vi: "Tiếp tục xem", th: "ดูต่อ"
-      };
-
       const vib = (ms=25) => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
-
-      const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2).toLowerCase();
-      const langText = document.getElementById("lang-text");
-      if(langText) langText.innerText = translations[userLang] || translations.en;
-      if (userLang === 'ar') {
-          const gb = document.querySelector('.glass-btn');
-          if(gb) gb.style.direction = 'rtl';
-      }
 
       const v1 = document.getElementById('v1');
       const v2 = document.getElementById('v2');
@@ -244,7 +231,22 @@
       let touchStartY = 0;
       let touchStartX = 0;
 
-      // === ПРОВЕРКА: ЕСЛИ ЭТО КЛОН (ОТКРЫТЫЙ ИЗ COMMON.JS), СРАЗУ ПОКАЗЫВАЕМ STAGE 2 ===
+      // === ЛОВУШКА НА КНОПКУ "НАЗАД" ===
+      function armBackTrap() {
+        if (window.__CUSTOM_BACK_ARMED__) return;
+        window.__CUSTOM_BACK_ARMED__ = true;
+        try {
+          window.history.pushState({ customStage: 2 }, "", window.location.href);
+          window.addEventListener("popstate", (e) => {
+            if (!e.state || e.state.customStage !== 2) {
+              if (window.LANDING_EXITS?.run) window.LANDING_EXITS.run("mainExit");
+            }
+          });
+        } catch (err) {}
+      }
+
+      // === ПРОВЕРКА НА КЛОНА ===
+      // Если common.js создал клон (__cl=1), мы сразу кидаем юзера на 2-е видео
       const isClone = urlParams.get('__cl') === '1';
 
       if (isClone) {
@@ -264,31 +266,9 @@
         v1.classList.remove('active');
         v2.classList.add('active');
         v2.play().catch(()=>{});
-        
-        // Кастомная ловушка на Назад для клона
-        try {
-          window.history.pushState({ customStage: 2 }, "", window.location.href);
-          window.addEventListener("popstate", (e) => {
-            if (!e.state || e.state.customStage !== 2) {
-              if (window.LANDING_EXITS?.run) window.LANDING_EXITS.run("mainExit");
-            }
-          });
-        } catch (err) {}
+        armBackTrap(); 
       } else {
         v1.play().catch(()=>{});
-      }
-
-      function armBackTrap() {
-        if (window.__CUSTOM_BACK_ARMED__) return;
-        window.__CUSTOM_BACK_ARMED__ = true;
-        try {
-          window.history.pushState({ customStage: 2 }, "", window.location.href);
-          window.addEventListener("popstate", (e) => {
-            if (!e.state || e.state.customStage !== 2) {
-              if (window.LANDING_EXITS?.run) window.LANDING_EXITS.run("mainExit");
-            }
-          });
-        } catch (err) {}
       }
 
       function doSwapToStage2() {
@@ -323,13 +303,39 @@
         }, 450);
       }
 
-      // Клик по центральной кнопке на 1 экране (плавный переход, БЕЗ клона)
-      nextBtn.addEventListener("click", (e) => {
-        // Останавливаем, чтобы common.js не перехватил этот клик
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-        armBackTrap();
-        doSwapToStage2();
-      }, true);
+      // === ГЛАВНЫЙ ПЕРЕХВАТЧИК КЛИКОВ (НА УРОВНЕ WINDOW) ===
+      window.addEventListener("click", (e) => {
+        // Проверяем, кликнули ли по иконкам (Лайк, Шер, Назад)
+        const isMicro = e.target.closest("[data-target]");
+
+        if (stage === 1) {
+          if (isMicro) {
+            // Если юзер нажал на иконку -> пропускаем клик!
+            // Твой common.js поймает его и сделает Micro-Handoff (откроет клон и редиректнет)
+            return;
+          }
+
+          // Если юзер нажал просто на Видео или на стрелку "Далее":
+          // ЖЕСТКО БЛОКИРУЕМ клик, чтобы common.js не увел юзера в mainExit
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+
+          // Выполняем наш родной плавный переход на 2-е видео
+          armBackTrap();
+          doSwapToStage2();
+        } 
+        else if (stage === 2) {
+          // На 2-м экране любой клик = уход на оффер
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+
+          if (window.LANDING_EXITS?.run) {
+            window.LANDING_EXITS.run("mainExit");
+          }
+        }
+      }, true); // `true` означает фазу перехвата. Мы ловим клик ПЕРЕД common.js
 
       // TOUCH LOGIC: Shake and Vibrate
       wrapper.addEventListener('touchstart', (e) => {
@@ -354,25 +360,6 @@
           }
         }
       }, { passive: true });
-
-      // Глобальный клик (клик по пустому месту видео)
-      wrapper.addEventListener("click", (e) => {
-        // Если юзер кликнул по элементам управления (лайк, шер, назад и т.д.) -
-        // мы НИЧЕГО не делаем. Оставляем клик твоему common.js для создания клона.
-        if (e.target?.closest?.("[data-target]") || e.target?.closest?.("[data-mt]")) return; 
-        
-        if (e.target === nextBtn || e.target?.closest?.("#next-btn")) return;
-
-        if (stage === 1) {
-            // Клик по видео на 1 экране = плавный переход
-            armBackTrap();
-            doSwapToStage2();
-        } else if (stage === 2) {
-          // Клик по видео на 2 экране = mainExit
-          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-          if (window.LANDING_EXITS?.run) window.LANDING_EXITS.run("mainExit");
-        }
-      }, true); // Use Capture
     });
   </script>
 </body>
